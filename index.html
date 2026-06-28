@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#15171c">
+<title>Albion Profit Calculator</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  :root{
+    --bg:#15171c; --panel:#1d2026; --panel2:#242832; --border:#2f3440;
+    --text:#e8e9ec; --muted:#92979f; --accent:#e0a230; --good:#3fb950; --bad:#f0555a;
+    --head:#0f1115;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;}
+  header{background:var(--head);padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  header h1{font-size:17px;margin:0;font-weight:600;color:var(--accent);}
+  header .sub{color:var(--muted);font-size:12px;}
+  nav{display:flex;gap:4px;padding:10px 20px 0;background:var(--head);border-bottom:1px solid var(--border);}
+  nav button{background:none;border:none;color:var(--muted);padding:10px 16px;cursor:pointer;font-size:14px;border-bottom:2px solid transparent;}
+  nav button.active{color:var(--accent);border-bottom-color:var(--accent);}
+  main{padding:20px;max-width:1400px;margin:0 auto;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;}
+  .panel h2{margin:0 0 12px;font-size:14px;color:var(--accent);font-weight:600;}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
+  .field{display:flex;flex-direction:column;gap:4px;min-width:120px;}
+  .field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+  select,input[type=text],input[type=number]{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:5px;font-size:13px;}
+  input[type=number]{width:90px;}
+  button.action{background:var(--accent);color:#1a1a1a;border:none;padding:9px 18px;border-radius:5px;font-weight:600;cursor:pointer;font-size:13px;}
+  button.action:hover{filter:brightness(1.1);}
+  button.toggle{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:5px;cursor:pointer;font-size:12px;}
+  button.toggle.on{border-color:var(--accent);color:var(--accent);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;}
+  th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;cursor:pointer;user-select:none;}
+  th:hover{color:var(--accent);}
+  tr:hover td{background:rgba(255,255,255,0.02);}
+  .pos{color:var(--good);font-weight:600;}
+  .neg{color:var(--bad);font-weight:600;}
+  .muted{color:var(--muted);}
+  .hint{color:var(--muted);font-size:11.5px;margin-top:6px;line-height:1.5;}
+  .status{font-size:12px;color:var(--muted);margin-top:8px;min-height:16px;}
+  .status.err{color:var(--bad);}
+  .badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10.5px;font-weight:600;}
+  .badge.high{background:rgba(63,185,80,.15);color:var(--good);}
+  .badge.mid{background:rgba(224,162,48,.15);color:var(--accent);}
+  .badge.low{background:rgba(240,85,90,.15);color:var(--bad);}
+  .tabsec{display:none;}
+  .tabsec.active{display:block;}
+  a{color:var(--accent);text-decoration:none;}
+
+  @media (max-width: 640px){
+    header{padding:10px 12px;gap:8px;}
+    header h1{font-size:15px;}
+    header .sub{font-size:10.5px;}
+    nav{padding:8px 12px 0;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    nav button{padding:9px 10px;font-size:13px;white-space:nowrap;}
+    main{padding:10px;}
+    .panel{padding:12px;}
+    .row{gap:10px;}
+    .field{min-width:0;flex:1 1 calc(50% - 10px);}
+    .field input[type=number],.field input[type=text],.field select{width:100%;}
+    input[type=number]{width:100%;}
+    button.action,button.toggle{padding:10px 14px;font-size:13px;min-height:40px;}
+    table{font-size:12px;}
+    th,td{padding:8px 7px;}
+    .hint{font-size:11px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Albion Profit Calculator</h1>
+  <div class="sub">Live data via Albion Online Data Project</div>
+</header>
+
+<nav>
+  <button class="tabbtn active" data-tab="refine">Refining</button>
+  <button class="tabbtn" data-tab="flip">Market Flip</button>
+  <button class="tabbtn" data-tab="bm">Black Market Flip</button>
+</nav>
+
+<main>
+
+  <div class="panel">
+    <h2>Global Settings</h2>
+    <div class="row">
+      <div class="field">
+        <label>Server / Region</label>
+        <select id="region">
+          <option value="https://europe.albion-online-data.com">Europe</option>
+          <option value="https://west.albion-online-data.com">Americas</option>
+          <option value="https://east.albion-online-data.com">Asia</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Sales Tax %</label>
+        <input type="number" id="tax" value="4" step="0.5">
+      </div>
+      <div class="field">
+        <label>Order Setup Fee %</label>
+        <input type="number" id="setupFee" value="2.5" step="0.5">
+      </div>
+      <div class="field">
+        <label></label>
+        <button class="toggle on" id="premiumBtn">Premium (4% / 2.5%)</button>
+      </div>
+    </div>
+    <div class="hint">Premium accounts pay 4% sales tax; non-premium pay 8%. Setup fee (2.5%) is charged when you place a sell order, win or not. These feed every tab below.</div>
+  </div>
+
+  <!-- ============ REFINING TAB ============ -->
+  <section class="tabsec active" id="tab-refine">
+    <div class="panel">
+      <h2>Refining Setup</h2>
+      <div class="row">
+        <div class="field">
+          <label>Resource Line</label>
+          <select id="r-line">
+            <option value="ORE">Ore → Metal Bar</option>
+            <option value="WOOD">Wood → Planks</option>
+            <option value="FIBER">Fiber → Cloth</option>
+            <option value="HIDE">Hide → Leather</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tier</label>
+          <select id="r-tier"></select>
+        </div>
+        <div class="field">
+          <label>Enchant</label>
+          <select id="r-enchant">
+            <option value="0">.0 (Normal)</option>
+            <option value="1">.1 (Uncommon)</option>
+            <option value="2">.2 (Rare)</option>
+            <option value="3">.3 (Exceptional)</option>
+            <option value="4">.4 (Pristine)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Raw Qty / Craft</label>
+          <input type="number" id="r-rawqty" value="1" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label>Prev-Tier Refined Qty</label>
+          <input type="number" id="r-prevqty" value="0" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label>City Base Bonus %</label>
+          <input type="number" id="r-basebonus" value="18" min="0" max="100" step="0.1">
+        </div>
+        <div class="field">
+          <label>Specialization Bonus %</label>
+          <input type="number" id="r-specbonus" value="40" min="0" max="100" step="0.1">
+        </div>
+        <div class="field">
+          <label></label>
+          <button class="toggle on" id="r-focustoggle">Using Focus</button>
+        </div>
+        <div class="field">
+          <label>Focus Bonus %</label>
+          <input type="number" id="r-focusbonus" value="59" min="0" max="150" step="0.1">
+        </div>
+        <div class="field">
+          <label>Station Fee (silver)</label>
+          <input type="number" id="r-fee" value="0" min="0" step="1">
+        </div>
+        <div class="field">
+          <label>Batch Size (units)</label>
+          <input type="number" id="r-batch" value="100" min="1" step="1">
+        </div>
+        <div class="field">
+          <label></label>
+          <button class="action" id="r-go">Calculate</button>
+        </div>
+      </div>
+      <div class="hint">
+        Default ratios follow the standard recipe (T2: 1 raw, no prev-tier bar; T3: 2 raw + 1 T2 bar; T4: 3 raw + 1 T3 bar; ... T8: 7 raw + 1 T7 bar) &mdash; edit if your setup differs.<br>
+        <b>Bonus stacking (source: wiki.albiononline.com):</b> bonuses add up, then convert to return rate as <code>bonus / (1 + bonus)</code>. Every royal city (Caerleon, Bridgewatch, Lymhurst, Martlock, Fort Sterling, Thetford) gets the +18% base production bonus; Brecilien gets none (not part of the royal continent). The +40% specialization bonus only applies in the one city that refines that material: <b>Ore → Thetford, Wood → Fort Sterling, Fiber → Lymhurst, Hide → Martlock</b>. Caerleon gets the base bonus only — no refining specialty. Focus (+59%) stacks on top wherever you use it. Defaults: no bonus = 15.3% return, specialized city = 36.7%, +Focus = 43.5% / 53.9%.
+      </div>
+      <div class="status" id="r-status"></div>
+    </div>
+
+    <div class="panel" id="r-summary" style="display:none;">
+      <h2>Recommended Pipeline</h2>
+      <div id="r-pipeline"></div>
+    </div>
+
+    <div class="panel" id="r-buyresults" style="display:none;">
+      <h2>Step 1 — Where to Buy Materials (cheapest first)</h2>
+      <div class="hint" style="margin-bottom:10px">Sourcing both the raw material and the previous-tier bar from whichever city is cheapest right now. Volume = avg units traded/day, last 7 days — low volume means thin order books even if the price looks great.</div>
+      <div style="overflow-x:auto"><table id="r-buytable"></table></div>
+    </div>
+
+    <div class="panel" id="r-refineresults" style="display:none;">
+      <h2>Step 2 — Where to Refine (return-rate bonus by city)</h2>
+      <div class="hint" style="margin-bottom:10px">Material cost uses the cheapest-sourced raw/prev prices from Step 1. The only thing that changes per city here is your effective return rate, since the specialization bonus only applies in the matching city (Caerleon gets its own separate bonus).</div>
+      <div style="overflow-x:auto"><table id="r-refinetable"></table></div>
+    </div>
+
+    <div class="panel" id="r-sellresults" style="display:none;">
+      <h2>Step 3 — Where to Sell (ranked by profit velocity)</h2>
+      <div class="hint" style="margin-bottom:10px">
+        Ranked by <b>Profit/Day = profit per unit × avg daily volume traded</b> (last 7 days) — this is what answers "which city pays back faster," not raw price. A city with the highest sticker price but thin volume (e.g. Caerleon) can lag well behind a city with a smaller margin but much heavier trading (e.g. Lymhurst, Thetford). "Est. days to sell batch" = batch size ÷ daily volume.
+        <br><b>Note on listing age:</b> the AODP API only exposes aggregate min/max prices and trade volume — it does not expose individual order IDs or the in-game "days remaining" countdown on a specific listing (that 30-day expiry timer is only visible by inspecting an order directly in-game). "Last Updated" below is the last time the cheapest/highest price changed, which is a proxy for data freshness, not how long that exact order has sat unsold.
+      </div>
+      <div style="overflow-x:auto"><table id="r-selltable"></table></div>
+    </div>
+
+    <!-- ---- BEST TIER & ENCHANT SCAN ---- -->
+    <div class="panel">
+      <h2>Which Tier &amp; Enchant Is Most Profitable Right Now?</h2>
+      <div class="row">
+        <div class="field">
+          <label></label>
+          <button class="action" id="r-tescan-go">Scan All Tiers &amp; Enchants for This Line</button>
+        </div>
+        <div class="field">
+          <label></label>
+          <button class="toggle on" id="r-tescan-sort-profit">Sort: Profit/Craft</button>
+        </div>
+        <div class="field">
+          <label></label>
+          <button class="toggle" id="r-tescan-sort-velocity">Sort: Profit/Day</button>
+        </div>
+      </div>
+      <div class="hint">
+        Runs the same buy-cheapest → refine-with-bonus → sell-best pipeline as Steps 1&ndash;3 above, but across every Tier (2&ndash;8) and Enchant (.0&ndash;.4) of the currently selected resource line (<span id="r-tescan-line-label">Ore</span>), using the global return-rate/bonus/fee settings from the panel above. Standard tier ratios are used (not your manually-edited Raw Qty/Prev-Tier Qty above, since those only apply to the single tier selected there).
+      </div>
+      <div class="status" id="r-tescan-status"></div>
+    </div>
+    <div class="panel" id="r-tescan-results" style="display:none;">
+      <h2>Profit by Tier &amp; Enchant</h2>
+      <div style="overflow-x:auto"><table id="r-tescan-table"></table></div>
+    </div>
+  </section>
+
+  <!-- ============ MARKET FLIP TAB ============ -->
+  <section class="tabsec" id="tab-flip">
+    <div class="row" style="margin-bottom:4px">
+      <button class="subtabbtn toggle on" data-subtab="top" id="f-subtab-top">Top 100 Opportunities</button>
+      <button class="subtabbtn toggle" data-subtab="single" id="f-subtab-single">Single Item Lookup</button>
+    </div>
+
+    <!-- ---- TOP 100 SCAN ---- -->
+    <div id="f-top-panel">
+      <div class="panel">
+        <h2>Scan Setup</h2>
+        <div class="row" style="margin-bottom:10px">
+          <div class="field">
+            <label>Categories</label>
+            <div class="row" style="gap:6px">
+              <button class="toggle on" data-cat="materials" id="t-cat-materials">Materials</button>
+              <button class="toggle on" data-cat="weapons" id="t-cat-weapons">Weapons</button>
+              <button class="toggle on" data-cat="armor" id="t-cat-armor">Armor</button>
+              <button class="toggle on" data-cat="accessories" id="t-cat-accessories">Accessories</button>
+              <button class="toggle on" data-cat="consumables" id="t-cat-consumables">Consumables</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Qualities</label>
+            <div class="row" style="gap:6px">
+              <button class="toggle on" data-qual="1" id="t-qual-1">1 Normal</button>
+              <button class="toggle" data-qual="2" id="t-qual-2">2 Good</button>
+              <button class="toggle" data-qual="3" id="t-qual-3">3 Outstanding</button>
+              <button class="toggle" data-qual="4" id="t-qual-4">4 Excellent</button>
+              <button class="toggle" data-qual="5" id="t-qual-5">5 Masterpiece</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Resell Mode</label>
+            <select id="t-mode">
+              <option value="sell">Place sell order (use destination sell_min)</option>
+              <option value="instant">Instant-sell to buy order (use destination buy_max)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Min Volume (units/day)</label>
+            <input type="number" id="t-minvol" value="5" min="0" step="1">
+          </div>
+          <div class="field">
+            <label>Batch Size (units)</label>
+            <input type="number" id="t-batch" value="100" min="1" step="1">
+          </div>
+          <div class="field">
+            <label></label>
+            <button class="action" id="t-go">Scan Top 100</button>
+          </div>
+        </div>
+        <div class="hint">
+          <b>Materials:</b> Ore/Wood/Fiber/Hide + refined goods, T2&ndash;T8, enchant .0&ndash;.4 (216 items).
+          <b>Weapons:</b> all one- and two-handed weapon types + off-hands, T4&ndash;T8, enchant .0&ndash;.4.
+          <b>Armor:</b> Head/Chest/Shoes &times; Cloth/Leather/Plate &times; all 3 set skins, T4&ndash;T8, enchant .0&ndash;.4.
+          <b>Accessories:</b> bags &amp; capes, T4&ndash;T8, enchant .0&ndash;.4.
+          <b>Consumables:</b> potions &amp; food, T4&ndash;T8, enchant .0&ndash;.4 (capped to whatever enchant level actually exists for that item).
+          All categories use quality 1 (Normal) only &mdash; including all 5 qualities would multiply the request count ~5x. <b>Not scanned:</b> mounts (don't follow this tier/enchant pattern), faction-reskinned gear (Avalon/Undead/Hellgate variants), and artifact/unique/quest items.
+          With everything enabled this is ~2,700 items and ~30 batched price requests &mdash; expect the scan to take up to a minute.
+          Min Volume filters out routes where either city trades fewer than that many units/day on average (last 7 days) &mdash; raise it to cut illiquid noise.
+        </div>
+        <div class="status" id="t-status"></div>
+      </div>
+      <div class="panel" id="t-results" style="display:none;">
+        <h2>Top 100 Profit Opportunities</h2>
+        <div class="hint" style="margin-bottom:10px">Ranked by profit/unit by default — click "Profit/Day" header logic via the sort buttons below to re-rank by volume-adjusted throughput instead.</div>
+        <div class="row" style="margin-bottom:10px">
+          <button class="toggle on" id="t-sort-profit">Sort: Profit/Unit</button>
+          <button class="toggle" id="t-sort-velocity">Sort: Profit/Day (vol-adjusted)</button>
+        </div>
+        <div style="overflow-x:auto"><table id="t-table"></table></div>
+      </div>
+    </div>
+
+    <!-- ---- SINGLE ITEM LOOKUP ---- -->
+    <div id="f-single-panel" style="display:none;">
+      <div class="panel">
+        <h2>Market Flip Setup</h2>
+        <div class="row">
+          <div class="field" style="min-width:260px">
+            <label>Item ID (e.g. T4_ORE, T6_LEATHER, T5_HEAD_PLATE_SET1@2)</label>
+            <input type="text" id="f-itemid" value="T4_METALBAR" style="width:100%">
+          </div>
+          <div class="field">
+            <label>Quality</label>
+            <select id="f-quality">
+              <option value="1">1 Normal</option>
+              <option value="2">2 Good</option>
+              <option value="3">3 Outstanding</option>
+              <option value="4">4 Excellent</option>
+              <option value="5">5 Masterpiece</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Resell Mode</label>
+            <select id="f-mode">
+              <option value="sell">Place sell order (use destination sell_min)</option>
+              <option value="instant">Instant-sell to buy order (use destination buy_max)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label></label>
+            <button class="action" id="f-go">Calculate</button>
+          </div>
+        </div>
+        <div class="hint">Buy side always assumes you instant-buy at the source city's lowest sell order. Volume = avg units traded/day over the last 7 days at that city, used as a liquidity signal — high spread with near-zero volume is a trap.</div>
+        <div class="status" id="f-status"></div>
+      </div>
+      <div class="panel" id="f-results" style="display:none;">
+        <h2>Best City Pairs</h2>
+        <div style="overflow-x:auto"><table id="f-table"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BLACK MARKET TAB ============ -->
+  <section class="tabsec" id="tab-bm">
+    <div class="row" style="margin-bottom:4px">
+      <button class="subtabbtn toggle on" data-subtab="top" id="b-subtab-top">Scan Black Market Inventory</button>
+      <button class="subtabbtn toggle" data-subtab="single" id="b-subtab-single">Single Item Lookup</button>
+    </div>
+
+    <!-- ---- SCAN ALL ITEMS ---- -->
+    <div id="b-top-panel">
+      <div class="panel">
+        <h2>Scan Setup</h2>
+        <div class="row" style="margin-bottom:10px">
+          <div class="field">
+            <label>Categories</label>
+            <div class="row" style="gap:6px">
+              <button class="toggle on" data-cat="materials" id="bt-cat-materials">Materials</button>
+              <button class="toggle on" data-cat="weapons" id="bt-cat-weapons">Weapons</button>
+              <button class="toggle on" data-cat="armor" id="bt-cat-armor">Armor</button>
+              <button class="toggle on" data-cat="accessories" id="bt-cat-accessories">Accessories</button>
+              <button class="toggle on" data-cat="consumables" id="bt-cat-consumables">Consumables</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Qualities</label>
+            <div class="row" style="gap:6px">
+              <button class="toggle on" data-qual="1" id="bt-qual-1">1 Normal</button>
+              <button class="toggle" data-qual="2" id="bt-qual-2">2 Good</button>
+              <button class="toggle" data-qual="3" id="bt-qual-3">3 Outstanding</button>
+              <button class="toggle" data-qual="4" id="bt-qual-4">4 Excellent</button>
+              <button class="toggle" data-qual="5" id="bt-qual-5">5 Masterpiece</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Min Volume (units/day)</label>
+            <input type="number" id="bt-minvol" value="5" min="0" step="1">
+          </div>
+          <div class="field">
+            <label></label>
+            <button class="action" id="bt-go">Scan Black Market</button>
+          </div>
+        </div>
+        <div class="hint">
+          Scans the same item universe as the Market Flip tab (materials, weapons, armor, accessories, consumables — T4&ndash;T8 or T2&ndash;T8 for materials, enchant .0&ndash;.4, quality 1) and checks each one against the Black Market's standing buy order. In practice: <b>raw/refined materials never have a Black Market order</b> (Black Market doesn't buy resources), while <b>almost every weapon/armor/bag/cape does</b> — Black Market is the game's main loot sink, so it'll quote a buy price on nearly any gear piece even if barely anyone is actually selling there right now.
+          That's why the volume columns matter more here than the profit number: in testing, the single highest "profit" hit traded only ~1 unit/day on Black Market (a stale snapshot from one old listing), while a much more modest-looking result a few rows down was moving 400+ units/day. Raise Min Volume if the top rows look implausibly profitable.
+          Black Market has no sell orders, only buy orders: you instant-sell into <code>buy_price_max</code>, there's nothing to place and wait on.
+        </div>
+        <div class="status" id="bt-status"></div>
+      </div>
+      <div class="panel" id="bt-results" style="display:none;">
+        <h2 id="bt-results-title">Black Market Inventory</h2>
+        <div style="overflow-x:auto"><table id="bt-table"></table></div>
+      </div>
+    </div>
+
+    <!-- ---- SINGLE ITEM LOOKUP ---- -->
+    <div id="b-single-panel" style="display:none;">
+      <div class="panel">
+        <h2>Black Market Flip Setup</h2>
+        <div class="row">
+          <div class="field" style="min-width:260px">
+            <label>Item ID (gear/artifacts sell best, e.g. T6_HEAD_PLATE_SET1@2)</label>
+            <input type="text" id="b-itemid" value="T4_BAG" style="width:100%">
+          </div>
+          <div class="field">
+            <label>Quality</label>
+            <select id="b-quality">
+              <option value="1">1 Normal</option>
+              <option value="2">2 Good</option>
+              <option value="3">3 Outstanding</option>
+              <option value="4">4 Excellent</option>
+              <option value="5">5 Masterpiece</option>
+            </select>
+          </div>
+          <div class="field">
+            <label></label>
+            <button class="action" id="b-go">Calculate</button>
+          </div>
+        </div>
+        <div class="hint">Black Market has no sell orders — you can only instant-sell into its standing buy order (buy_price_max = best available). Source = cheapest royal-city sell order. Tax/setup fee from Global Settings still apply to the Black Market sale.</div>
+        <div class="status" id="b-status"></div>
+      </div>
+      <div class="panel" id="b-results" style="display:none;">
+        <h2>Buy City → Black Market</h2>
+        <div style="overflow-x:auto"><table id="b-table"></table></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+const CITIES = ["Caerleon","Bridgewatch","Lymhurst","Martlock","Fort Sterling","Thetford","Brecilien"];
+const CITY_PARAM = c => c.replace(/\s+/g,"");
+const LINES = {
+  ORE:   {raw:"ORE",       refined:"METALBAR"},
+  WOOD:  {raw:"WOOD",      refined:"PLANKS"},
+  FIBER: {raw:"FIBER",     refined:"CLOTH"},
+  HIDE:  {raw:"HIDE",      refined:"LEATHER"},
+};
+const RATIO = {2:{raw:1,prev:0},3:{raw:2,prev:1},4:{raw:3,prev:1},5:{raw:4,prev:1},6:{raw:5,prev:1},7:{raw:6,prev:1},8:{raw:7,prev:1}};
+// Source: wiki.albiononline.com Local Production Bonus — refining specialization by city.
+const SPECIALIZATION_CITY = {ORE:"Thetford", WOOD:"Fort Sterling", FIBER:"Lymhurst", HIDE:"Martlock"};
+
+// Item names from ao-bin-dumps (broderickhyman/ao-bin-dumps) items.txt — used for display only.
+const BASE_NAMES = {
+  ORE:      {2:"Copper Ore",3:"Tin Ore",4:"Iron Ore",5:"Titanium Ore",6:"Runite Ore",7:"Meteorite Ore",8:"Adamantium Ore"},
+  WOOD:     {2:"Birch Logs",3:"Chestnut Logs",4:"Pine Logs",5:"Cedar Logs",6:"Bloodoak Logs",7:"Ashenbark Logs",8:"Whitewood Logs"},
+  FIBER:    {2:"Cotton",3:"Flax",4:"Hemp",5:"Skyflower",6:"Amberleaf Cotton",7:"Sunflax",8:"Ghost Hemp"},
+  HIDE:     {2:"Rugged Hide",3:"Thin Hide",4:"Medium Hide",5:"Heavy Hide",6:"Robust Hide",7:"Thick Hide",8:"Resilient Hide"},
+  METALBAR: {2:"Copper Bar",3:"Bronze Bar",4:"Steel Bar",5:"Titanium Steel Bar",6:"Runite Steel Bar",7:"Meteorite Steel Bar",8:"Adamantium Steel Bar"},
+  PLANKS:   {2:"Birch Planks",3:"Chestnut Planks",4:"Pine Planks",5:"Cedar Planks",6:"Bloodoak Planks",7:"Ashenbark Planks",8:"Whitewood Planks"},
+  CLOTH:    {2:"Simple Cloth",3:"Neat Cloth",4:"Fine Cloth",5:"Ornate Cloth",6:"Lavish Cloth",7:"Opulent Cloth",8:"Baroque Cloth"},
+  LEATHER:  {2:"Stiff Leather",3:"Thick Leather",4:"Worked Leather",5:"Cured Leather",6:"Hardened Leather",7:"Reinforced Leather",8:"Fortified Leather"},
+};
+const ENCHANT_PREFIX = {0:"", 1:"Uncommon ", 2:"Rare ", 3:"Exceptional ", 4:"Pristine "};
+function itemName(base, tier, enchant){
+  const name = (BASE_NAMES[base]||{})[tier] || `${base} T${tier}`;
+  return `${ENCHANT_PREFIX[enchant]||""}${name}`;
+}
+function buildMaterialsUniverse(){
+  const bases = ["ORE","WOOD","FIBER","HIDE","METALBAR","PLANKS","CLOTH","LEATHER"];
+  const items = [];
+  for(const base of bases){
+    for(let tier=2; tier<=8; tier++){
+      const maxEnchant = tier>=4 ? 4 : 0;
+      for(let ench=0; ench<=maxEnchant; ench++){
+        items.push({id: buildItemId(base, tier, ench), category:"materials", tier, enchant: ench, name: itemName(base, tier, ench)});
+      }
+    }
+  }
+  return items;
+}
+
+// Source: ao-bin-dumps items.txt — core (non-faction-reskinned) gear types, T4-T8.
+const WEAPON_1H = ["1HCROSSBOW","ARCANESTAFF","AXE","CURSEDSTAFF","DAGGER","FIRESTAFF","FROSTSTAFF","HAMMER","HOLYSTAFF","MACE","NATURESTAFF","SPEAR","SWORD"];
+const WEAPON_2H = ["ARCANESTAFF","AXE","BOW","CLAWPAIR","CLAYMORE","CROSSBOW","CROSSBOWLARGE","CURSEDSTAFF","DAGGERPAIR","DEMONICSTAFF","DIVINESTAFF","DOUBLEBLADEDSTAFF","DUALSWORD","ENIGMATICSTAFF","FIRESTAFF","FLAIL","FROSTSTAFF","GLACIALSTAFF","GLAIVE","HALBERD","HAMMER","HOLYSTAFF","INFERNOSTAFF","IRONCLADEDSTAFF","LONGBOW","MACE","NATURESTAFF","POLEHAMMER","QUARTERSTAFF","SPEAR","WARBOW","WILDSTAFF"];
+const OFFHAND_TYPES = ["BOOK","SHIELD","TORCH"];
+const ARMOR_LINES = ["CLOTH","LEATHER","PLATE"];
+const ARMOR_SLOTS = {HEAD:"Helmet", ARMOR:"Chest", SHOES:"Boots"};
+const POTION_TYPES = ["CLEANSE","COOLDOWN","ENERGY","HEAL","REVIVE","SLOWFIELD","STONESKIN"];
+const FOOD_TYPES = ["GRILLEDFISH","OMELETTE","OMELETTE_FISH","PIE","PIE_FISH","ROAST","ROAST_FISH","SALAD","SALAD_FISH","SANDWICH","SANDWICH_FISH","SEAWEEDSALAD","SOUP","SOUP_FISH","STEW","STEW_FISH"];
+function humanize(str){
+  return str.split("_").map(w=>w.charAt(0)+w.slice(1).toLowerCase()).join(" ");
+}
+function buildWeaponsUniverse(){
+  const items = [];
+  for(let tier=4; tier<=8; tier++){
+    for(let ench=0; ench<=4; ench++){
+      for(const t of WEAPON_1H) items.push({id: buildEquipmentId(`MAIN_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${humanize(t)}`});
+      for(const t of WEAPON_2H) items.push({id: buildEquipmentId(`2H_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${humanize(t)} (2H)`});
+      for(const t of OFFHAND_TYPES) items.push({id: buildEquipmentId(`OFF_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${humanize(t)} (Off-Hand)`});
+    }
+  }
+  return items;
+}
+function buildArmorUniverse(){
+  const items = [];
+  for(let tier=4; tier<=8; tier++){
+    for(let ench=0; ench<=4; ench++){
+      for(const slot of Object.keys(ARMOR_SLOTS)){
+        for(const line of ARMOR_LINES){
+          for(let set=1; set<=3; set++){
+            items.push({id: buildItemId(`${slot}_${line}_SET${set}`, tier, ench), category:"armor", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${line} ${ARMOR_SLOTS[slot]} (Set ${set})`});
+          }
+        }
+      }
+    }
+  }
+  return items;
+}
+function buildAccessoriesUniverse(){
+  const items = [];
+  for(let tier=4; tier<=8; tier++){
+    for(let ench=0; ench<=4; ench++){
+      items.push({id: buildEquipmentId("BAG", tier, ench), category:"accessories", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} Bag`});
+      items.push({id: buildEquipmentId("CAPE", tier, ench), category:"accessories", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} Cape`});
+    }
+  }
+  return items;
+}
+function buildConsumablesUniverse(){
+  const items = [];
+  for(let tier=4; tier<=8; tier++){
+    for(let ench=0; ench<=4; ench++){
+      for(const t of POTION_TYPES) items.push({id: buildEquipmentId(`POTION_${t}`, tier, ench), category:"consumables", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${humanize(t)} Potion`});
+      for(const t of FOOD_TYPES) items.push({id: buildEquipmentId(`MEAL_${t}`, tier, ench), category:"consumables", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${humanize(t)}`});
+    }
+  }
+  return items;
+}
+function buildScanUniverse(enabledCategories){
+  let items = [];
+  if(enabledCategories.has("materials")) items = items.concat(buildMaterialsUniverse());
+  if(enabledCategories.has("weapons")) items = items.concat(buildWeaponsUniverse());
+  if(enabledCategories.has("armor")) items = items.concat(buildArmorUniverse());
+  if(enabledCategories.has("accessories")) items = items.concat(buildAccessoriesUniverse());
+  if(enabledCategories.has("consumables")) items = items.concat(buildConsumablesUniverse());
+  return items;
+}
+function chunk(arr, size){
+  const out = [];
+  for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size));
+  return out;
+}
+// Limits concurrent in-flight requests so a large scan doesn't burst-fire 30+ requests at once.
+async function mapWithConcurrency(items, limit, fn){
+  const results = new Array(items.length);
+  let idx = 0;
+  async function worker(){
+    while(idx < items.length){
+      const i = idx++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(Array.from({length: Math.min(limit, items.length)}, worker));
+  return results;
+}
+function ageString(dateStr){
+  if(!dateStr || dateStr.startsWith("0001")) return "no data";
+  const d = new Date(dateStr+"Z");
+  const diffMs = Date.now() - d.getTime();
+  const mins = diffMs/60000;
+  if(mins < 60) return Math.round(mins)+"m ago";
+  const hrs = mins/60;
+  if(hrs < 48) return hrs.toFixed(1)+"h ago";
+  return (hrs/24).toFixed(1)+"d ago";
+}
+
+function regionBase(){ return document.getElementById("region").value; }
+function taxFrac(){ return parseFloat(document.getElementById("tax").value)/100; }
+function feeFrac(){ return parseFloat(document.getElementById("setupFee").value)/100; }
+function fmt(n){ if(n===null||n===undefined||isNaN(n)) return "—"; return Math.round(n).toLocaleString(); }
+function pct(n){ if(n===null||n===undefined||isNaN(n)) return "—"; return n.toFixed(1)+"%"; }
+function cls(n){ return n>0?"pos":(n<0?"neg":""); }
+
+function buildItemId(base, tier, enchant){
+  enchant = parseInt(enchant);
+  if(!enchant) return `T${tier}_${base}`;
+  return `T${tier}_${base}_LEVEL${enchant}@${enchant}`;
+}
+// Equipment (weapons/armor/bags/capes/potions/food) encodes enchant as a bare @n suffix,
+// unlike raw/refined resources which use _LEVELn@n. Mixing these up silently builds wrong IDs.
+function buildEquipmentId(base, tier, enchant){
+  enchant = parseInt(enchant);
+  if(!enchant) return `T${tier}_${base}`;
+  return `T${tier}_${base}@${enchant}`;
+}
+
+async function fetchJSON(url){
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
+
+async function fetchPrices(itemIds, quality){
+  const ids = Array.isArray(itemIds) ? itemIds.join(",") : itemIds;
+  const locs = CITIES.concat(["BlackMarket"]).map(CITY_PARAM).join(",");
+  const url = `${regionBase()}/api/v2/stats/prices/${encodeURIComponent(ids)}.json?locations=${locs}&qualities=${quality||1}`;
+  const data = await fetchJSON(url);
+  const map = {};
+  for(const row of data){
+    map[`${row.item_id}|${row.city}`] = row;
+  }
+  return map;
+}
+
+async function fetchVolume(itemId, quality){
+  const locs = CITIES.concat(["BlackMarket"]).map(CITY_PARAM).join(",");
+  const url = `${regionBase()}/api/v2/stats/history/${encodeURIComponent(itemId)}.json?locations=${locs}&qualities=${quality||1}&time-scale=24`;
+  let data;
+  try{ data = await fetchJSON(url); } catch(e){ return {}; }
+  const map = {};
+  for(const row of data){
+    const recent = (row.data||[]).slice(-7);
+    const total = recent.reduce((s,d)=>s+(d.item_count||0),0);
+    map[row.location] = recent.length ? total/recent.length : 0;
+  }
+  return map;
+}
+
+// Batched variant for scanning many items at once — returns {itemId: {city: avgDailyVolume}}
+async function fetchVolumeMulti(itemIds, quality){
+  const locs = CITIES.concat(["BlackMarket"]).map(CITY_PARAM).join(",");
+  const ids = itemIds.join(",");
+  const url = `${regionBase()}/api/v2/stats/history/${encodeURIComponent(ids)}.json?locations=${locs}&qualities=${quality||1}&time-scale=24`;
+  let data;
+  try{ data = await fetchJSON(url); } catch(e){ return {}; }
+  const map = {};
+  for(const row of data){
+    const recent = (row.data||[]).slice(-7);
+    const total = recent.reduce((s,d)=>s+(d.item_count||0),0);
+    if(!map[row.item_id]) map[row.item_id] = {};
+    map[row.item_id][row.location] = recent.length ? total/recent.length : 0;
+  }
+  return map;
+}
+
+// Multi-quality price fetch — one request returns all requested qualities (the API
+// supports qualities=1,2,3,4,5 in a single call, no extra requests needed).
+// Returns {itemId: {quality: {city: row}}}
+async function fetchPricesByQuality(itemIds, qualities){
+  const ids = Array.isArray(itemIds) ? itemIds.join(",") : itemIds;
+  const qs = qualities.join(",");
+  const locs = CITIES.concat(["BlackMarket"]).map(CITY_PARAM).join(",");
+  const url = `${regionBase()}/api/v2/stats/prices/${encodeURIComponent(ids)}.json?locations=${locs}&qualities=${qs}`;
+  const data = await fetchJSON(url);
+  const map = {};
+  for(const row of data){
+    if(!map[row.item_id]) map[row.item_id] = {};
+    if(!map[row.item_id][row.quality]) map[row.item_id][row.quality] = {};
+    map[row.item_id][row.quality][row.city] = row;
+  }
+  return map;
+}
+
+// Multi-quality volume fetch — returns {itemId: {quality: {city: avgDailyVolume}}}
+async function fetchVolumeMultiByQuality(itemIds, qualities){
+  const locs = CITIES.concat(["BlackMarket"]).map(CITY_PARAM).join(",");
+  const ids = itemIds.join(",");
+  const qs = qualities.join(",");
+  const url = `${regionBase()}/api/v2/stats/history/${encodeURIComponent(ids)}.json?locations=${locs}&qualities=${qs}&time-scale=24`;
+  let data;
+  try{ data = await fetchJSON(url); } catch(e){ return {}; }
+  const map = {};
+  for(const row of data){
+    const recent = (row.data||[]).slice(-7);
+    const total = recent.reduce((s,d)=>s+(d.item_count||0),0);
+    const q = row.quality||1;
+    if(!map[row.item_id]) map[row.item_id] = {};
+    if(!map[row.item_id][q]) map[row.item_id][q] = {};
+    map[row.item_id][q][row.location] = recent.length ? total/recent.length : 0;
+  }
+  return map;
+}
+const QUALITY_LABEL = {1:"Normal", 2:"Good", 3:"Outstanding", 4:"Excellent", 5:"Masterpiece"};
+
+function liquidityBadge(vol){
+  if(vol===undefined||vol===null) return "";
+  let tier = "low", label = "low";
+  if(vol>=500){ tier="high"; label="high"; }
+  else if(vol>=50){ tier="mid"; label="med"; }
+  return `<span class="badge ${tier}">${label} · ${fmt(vol)}/d</span>`;
+}
+
+// ---------- MARKET FLIP SUB-TABS ----------
+document.getElementById("f-subtab-top").addEventListener("click", ()=>{
+  document.getElementById("f-subtab-top").classList.add("on");
+  document.getElementById("f-subtab-single").classList.remove("on");
+  document.getElementById("f-top-panel").style.display = "block";
+  document.getElementById("f-single-panel").style.display = "none";
+});
+document.getElementById("f-subtab-single").addEventListener("click", ()=>{
+  document.getElementById("f-subtab-single").classList.add("on");
+  document.getElementById("f-subtab-top").classList.remove("on");
+  document.getElementById("f-single-panel").style.display = "block";
+  document.getElementById("f-top-panel").style.display = "none";
+});
+
+// ---------- TOP 100 OPPORTUNITIES SCAN ----------
+let topScanResults = null;
+document.querySelectorAll("#f-top-panel [data-cat]").forEach(btn=>{
+  btn.addEventListener("click", ()=> btn.classList.toggle("on"));
+});
+document.querySelectorAll("#f-top-panel [data-qual]").forEach(btn=>{
+  btn.addEventListener("click", ()=> btn.classList.toggle("on"));
+});
+document.getElementById("t-go").addEventListener("click", runTopScan);
+document.getElementById("t-sort-profit").addEventListener("click", ()=>{
+  document.getElementById("t-sort-profit").classList.add("on");
+  document.getElementById("t-sort-velocity").classList.remove("on");
+  if(topScanResults) renderTopScan(topScanResults, "profit");
+});
+document.getElementById("t-sort-velocity").addEventListener("click", ()=>{
+  document.getElementById("t-sort-velocity").classList.add("on");
+  document.getElementById("t-sort-profit").classList.remove("on");
+  if(topScanResults) renderTopScan(topScanResults, "velocity");
+});
+
+async function runTopScan(){
+  const statusEl = document.getElementById("t-status");
+  statusEl.className = "status";
+  try{
+    const mode = document.getElementById("t-mode").value;
+    const minVol = parseFloat(document.getElementById("t-minvol").value) || 0;
+    const tax = taxFrac(), fee = feeFrac();
+
+    const enabledCategories = new Set(
+      Array.from(document.querySelectorAll("#f-top-panel [data-cat]"))
+        .filter(b=>b.classList.contains("on"))
+        .map(b=>b.dataset.cat)
+    );
+    if(!enabledCategories.size) throw new Error("Select at least one category to scan.");
+
+    const qualities = Array.from(document.querySelectorAll("#f-top-panel [data-qual]"))
+      .filter(b=>b.classList.contains("on"))
+      .map(b=>parseInt(b.dataset.qual));
+    if(!qualities.length) throw new Error("Select at least one quality to scan.");
+
+    const universe = buildScanUniverse(enabledCategories);
+    const idChunks = chunk(universe.map(u=>u.id), 90);
+    statusEl.textContent = `Fetching prices for ${universe.length} items × ${qualities.length} quality level(s) across ${CITIES.length} cities (${idChunks.length} requests)…`;
+
+    const priceMaps = await mapWithConcurrency(idChunks, 6, c=>fetchPricesByQuality(c, qualities));
+    const priceMap = {};
+    for(const m of priceMaps) for(const id of Object.keys(m)){
+      priceMap[id] = Object.assign(priceMap[id]||{}, m[id]);
+    }
+
+    // First pass: best buy->sell pair per (item, quality) using price alone (no volume yet —
+    // fetching volume for every combo up front would be wasted work for the ~100 we keep).
+    const candidates = [];
+    for(const item of universe){
+      const byQuality = priceMap[item.id] || {};
+      for(const q of qualities){
+        const cityMap = byQuality[q] || {};
+        const cityRows = CITIES.map(city=>{
+          const row = cityMap[city];
+          return {
+            city,
+            sellMin: row?.sell_price_min||0, sellMinDate: row?.sell_price_min_date,
+            buyMax: row?.buy_price_max||0, buyMaxDate: row?.buy_price_max_date,
+          };
+        });
+        let best = null;
+        for(const buyC of cityRows){
+          if(!buyC.sellMin) continue;
+          for(const sellC of cityRows){
+            if(buyC.city===sellC.city) continue;
+            const destPrice = mode==="sell" ? sellC.sellMin : sellC.buyMax;
+            const destDate = mode==="sell" ? sellC.sellMinDate : sellC.buyMaxDate;
+            if(!destPrice) continue;
+            const netRevenue = mode==="sell" ? destPrice*(1-tax-fee) : destPrice*(1-tax);
+            const profit = netRevenue - buyC.sellMin;
+            if(!best || profit>best.profit){
+              best = {buyCity:buyC.city, sellCity:sellC.city, buyPrice:buyC.sellMin, buyDate:buyC.sellMinDate, sellPrice:destPrice, sellDate:destDate, profit, margin: buyC.sellMin>0?profit/buyC.sellMin*100:null};
+            }
+          }
+        }
+        if(best && best.profit>0) candidates.push({...item, quality:q, ...best});
+      }
+    }
+
+    candidates.sort((a,b)=>b.profit-a.profit);
+    const top = candidates.slice(0,100);
+    if(!top.length) throw new Error("No profitable routes found across the scanned item set right now.");
+
+    statusEl.textContent = `Fetching volume for top ${top.length} candidates…`;
+    const topIdsUnique = [...new Set(top.map(t=>t.id))];
+    const volChunks = chunk(topIdsUnique, 90);
+    const volMaps = await mapWithConcurrency(volChunks, 6, c=>fetchVolumeMultiByQuality(c, qualities));
+    const volMap = {};
+    for(const m of volMaps) for(const id of Object.keys(m)){
+      volMap[id] = Object.assign(volMap[id]||{}, m[id]);
+    }
+
+    top.forEach(t=>{
+      const qVol = (volMap[t.id]||{})[t.quality] || {};
+      t.buyVol = qVol[t.buyCity] || 0;
+      t.sellVol = qVol[t.sellCity] || 0;
+      t.bottleneckVol = Math.min(t.buyVol, t.sellVol);
+      t.velocity = t.profit * t.bottleneckVol;
+    });
+
+    const filtered = top.filter(t=>t.bottleneckVol >= minVol);
+    if(!filtered.length) throw new Error(`No candidates clear the Min Volume filter (${minVol}/day) — try lowering it.`);
+
+    topScanResults = filtered;
+    const sortMode = document.getElementById("t-sort-velocity").classList.contains("on") ? "velocity" : "profit";
+    renderTopScan(filtered, sortMode);
+    statusEl.textContent = `Scanned ${universe.length} items × ${qualities.length} quality level(s), found ${candidates.length} profitable routes, showing top ${filtered.length} (region ${regionBase()}).`;
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+    document.getElementById("t-results").style.display = "none";
+  }
+}
+
+function renderTopScan(rows, sortMode){
+  const batchSize = parseFloat(document.getElementById("t-batch").value) || 100;
+  const sorted = [...rows].sort((a,b)=> sortMode==="velocity" ? b.velocity-a.velocity : b.profit-a.profit);
+
+  let html = `<thead><tr><th>#</th><th>Item</th><th>Quality</th><th>Buy City</th><th>Sell City</th><th>Buy Price</th><th>Buy Updated</th><th>Sell Price</th><th>Sell Updated</th><th>Profit/Unit</th><th>Margin</th><th>Buy Vol</th><th>Sell Vol</th><th>Profit/Day</th></tr></thead><tbody>`;
+  sorted.forEach((r,i)=>{
+    html += `<tr>
+      <td>${i+1}</td>
+      <td>${r.name} <span class="muted" style="font-size:10.5px">(${r.id})</span></td>
+      <td>${QUALITY_LABEL[r.quality]||r.quality}</td>
+      <td>${r.buyCity}</td>
+      <td>${r.sellCity}</td>
+      <td>${fmt(r.buyPrice)}</td>
+      <td class="muted">${ageString(r.buyDate)}</td>
+      <td>${fmt(r.sellPrice)}</td>
+      <td class="muted">${ageString(r.sellDate)}</td>
+      <td class="${cls(r.profit)}">${fmt(r.profit)}</td>
+      <td class="${cls(r.profit)}">${pct(r.margin)}</td>
+      <td>${liquidityBadge(r.buyVol)}</td>
+      <td>${liquidityBadge(r.sellVol)}</td>
+      <td class="${cls(r.velocity)}">${fmt(r.velocity)}</td>
+    </tr>`;
+  });
+  html += "</tbody>";
+  document.getElementById("t-table").innerHTML = html;
+  document.getElementById("t-results").style.display = "block";
+}
+
+// ---------- TABS ----------
+document.querySelectorAll(".tabbtn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".tabbtn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".tabsec").forEach(s=>s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("tab-"+btn.dataset.tab).classList.add("active");
+  });
+});
+
+// ---------- PREMIUM TOGGLE ----------
+let premium = true;
+document.getElementById("premiumBtn").addEventListener("click", ()=>{
+  premium = !premium;
+  const btn = document.getElementById("premiumBtn");
+  if(premium){
+    btn.textContent = "Premium (4% / 2.5%)";
+    btn.classList.add("on");
+    document.getElementById("tax").value = 4;
+  } else {
+    btn.textContent = "Non-Premium (8% / 2.5%)";
+    btn.classList.remove("on");
+    document.getElementById("tax").value = 8;
+  }
+});
+
+// ---------- REFINING TAB ----------
+const tierSel = document.getElementById("r-tier");
+for(let t=2;t<=8;t++){ const o=document.createElement("option"); o.value=t; o.textContent="Tier "+t; tierSel.appendChild(o); }
+tierSel.value = 4;
+
+function syncRatio(){
+  const tier = parseInt(tierSel.value);
+  const r = RATIO[tier];
+  document.getElementById("r-rawqty").value = r.raw;
+  document.getElementById("r-prevqty").value = r.prev;
+}
+tierSel.addEventListener("change", syncRatio);
+syncRatio();
+
+document.getElementById("r-focustoggle").addEventListener("click", (e)=>{
+  e.target.classList.toggle("on");
+  e.target.textContent = e.target.classList.contains("on") ? "Using Focus" : "Not Using Focus";
+});
+
+document.getElementById("r-go").addEventListener("click", runRefine);
+
+function daysToSell(batch, vol){
+  if(!vol) return "∞";
+  const d = batch/vol;
+  if(d < 1) return "<1 day";
+  return d.toFixed(1) + " days";
+}
+
+let R = null; // cached fetch results for the current refine setup, re-rendered on click without refetching
+
+async function runRefine(){
+  const statusEl = document.getElementById("r-status");
+  statusEl.className = "status"; statusEl.textContent = "Fetching live prices & volumes…";
+  try{
+    const lineKey = document.getElementById("r-line").value;
+    const line = LINES[lineKey];
+    const tier = parseInt(document.getElementById("r-tier").value);
+    const enchant = document.getElementById("r-enchant").value;
+
+    const rawId = buildItemId(line.raw, tier, enchant);
+    const refinedId = buildItemId(line.refined, tier, enchant);
+    const prevRawId = tier>2 ? buildItemId(line.refined, tier-1, enchant) : null;
+
+    const ids = [rawId, refinedId];
+    if(prevRawId) ids.push(prevRawId);
+
+    const [priceMap, rawVol, sellVol, prevVol] = await Promise.all([
+      fetchPrices(ids, 1),
+      fetchVolume(rawId, 1),
+      fetchVolume(refinedId, 1),
+      prevRawId ? fetchVolume(prevRawId, 1) : Promise.resolve({}),
+    ]);
+
+    const rawCandidates = CITIES.map(city=>{
+      const row = priceMap[`${rawId}|${city}`];
+      return {city, price: row?.sell_price_min||0, date: row?.sell_price_min_date, vol: rawVol[city]||0};
+    }).filter(c=>c.price>0).sort((a,b)=>a.price-b.price);
+    const prevCandidates = prevRawId ? CITIES.map(city=>{
+      const row = priceMap[`${prevRawId}|${city}`];
+      return {city, price: row?.sell_price_min||0, date: row?.sell_price_min_date, vol: prevVol[city]||0};
+    }).filter(c=>c.price>0).sort((a,b)=>a.price-b.price) : [];
+
+    if(!rawCandidates.length || (prevRawId && !prevCandidates.length)){
+      throw new Error("No active sell orders found for the raw material(s) in any city right now.");
+    }
+
+    const sellCandidatesBase = CITIES.map(city=>{
+      const row = priceMap[`${refinedId}|${city}`];
+      const sp = row?.sell_price_min||0;
+      return {city, price: sp, date: row?.sell_price_min_date, vol: sellVol[city]||0};
+    }).filter(c=>c.price>0);
+
+    if(!sellCandidatesBase.length) throw new Error("No active sell orders found for the refined good in any city right now.");
+
+    R = {lineKey, rawId, refinedId, prevRawId, rawCandidates, prevCandidates, sellCandidatesBase, selectedRawCity: null};
+    renderRefine();
+    statusEl.textContent = `Loaded ${rawId} / ${refinedId}${prevRawId?(' / '+prevRawId):''} · region ${regionBase()}`;
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+    document.getElementById("r-summary").style.display = "none";
+    document.getElementById("r-buyresults").style.display = "none";
+    document.getElementById("r-refineresults").style.display = "none";
+    document.getElementById("r-sellresults").style.display = "none";
+    R = null;
+  }
+}
+
+function renderRefine(){
+  if(!R) return;
+  const {lineKey, rawCandidates, prevCandidates, sellCandidatesBase, selectedRawCity} = R;
+
+  const rawQty = parseFloat(document.getElementById("r-rawqty").value);
+  const prevQty = parseFloat(document.getElementById("r-prevqty").value);
+  const baseBonus = parseFloat(document.getElementById("r-basebonus").value)/100;
+  const specBonusPct = parseFloat(document.getElementById("r-specbonus").value)/100;
+  const useFocus = document.getElementById("r-focustoggle").classList.contains("on");
+  const focusBonus = useFocus ? parseFloat(document.getElementById("r-focusbonus").value)/100 : 0;
+  const stationFee = parseFloat(document.getElementById("r-fee").value);
+  const batchSize = parseFloat(document.getElementById("r-batch").value) || 100;
+  const tax = taxFrac(), fee = feeFrac();
+
+  const rawBest = selectedRawCity ? rawCandidates.find(c=>c.city===selectedRawCity) || rawCandidates[0] : rawCandidates[0];
+  const prevBest = prevCandidates[0] || null; // previous-tier bar sourcing stays at cheapest
+
+  const sellCandidates = sellCandidatesBase.map(c=>({...c, net: c.price*(1-tax-fee)})).sort((a,b)=>b.net-a.net);
+  const sellBest = sellCandidates[0];
+
+  // Step 2: refine-city comparison — bonuses stack additively, then convert to
+  // return rate via bonus/(1+bonus). Source: wiki.albiononline.com Local Production Bonus.
+  const specCity = SPECIALIZATION_CITY[lineKey];
+  const refineRows = CITIES.map(city=>{
+    const cityBase = city === "Brecilien" ? 0 : baseBonus;
+    const spec = city === specCity ? specBonusPct : 0;
+    const totalBonus = cityBase + spec + focusBonus;
+    const totalReturn = totalBonus / (1 + totalBonus);
+    const notes = [];
+    if(cityBase) notes.push(`base +${pct(cityBase*100)}`);
+    if(spec) notes.push(`specialty +${pct(spec*100)}`);
+    if(focusBonus) notes.push(`focus +${pct(focusBonus*100)}`);
+    const note = notes.length ? notes.join(", ") : "no bonus";
+    const materialCost = (rawQty*rawBest.price + prevQty*(prevBest?prevBest.price:0)) * (1-totalReturn);
+    const profit = sellBest.net - materialCost - stationFee;
+    const margin = materialCost>0 ? profit/materialCost*100 : null;
+    return {city, totalReturn, materialCost, profit, margin, note, isSpec: city===specCity};
+  }).sort((a,b)=>b.profit-a.profit);
+
+  const bestRefineRow = refineRows[0];
+
+  // Profit velocity per sell city: holds the refine cost fixed at the best refine
+  // city's material cost, then asks "how fast does THIS city actually pay that back".
+  sellCandidates.forEach(c=>{
+    c.profitPerUnit = c.net - bestRefineRow.materialCost - stationFee;
+    c.velocity = c.profitPerUnit * c.vol; // silver/day if you could sell continuously
+  });
+  const sellByVelocity = [...sellCandidates].sort((a,b)=>b.velocity-a.velocity);
+  const fastestSell = sellByVelocity[0];
+  const highestPriceSell = sellCandidates[0]; // already sorted by net price desc
+
+  const marginFastest = bestRefineRow.materialCost>0 ? fastestSell.profitPerUnit/bestRefineRow.materialCost*100 : null;
+
+  // ---- Pipeline summary ----
+  const pipelineHtml = `
+    <div class="row" style="gap:24px">
+      <div class="field" style="min-width:200px">
+        <label>1. Buy Raw In ${selectedRawCity?'<span class="badge mid">manually selected</span>':''}</label>
+        <div style="font-size:18px;font-weight:600">${rawBest.city}</div>
+        <div class="muted">${fmt(rawBest.price)} silver · ${liquidityBadge(rawBest.vol)} · updated ${ageString(rawBest.date)}</div>
+      </div>
+      ${prevBest ? `<div class="field" style="min-width:200px">
+        <label>1b. Buy Prev-Tier Bar In</label>
+        <div style="font-size:18px;font-weight:600">${prevBest.city}</div>
+        <div class="muted">${fmt(prevBest.price)} silver · ${liquidityBadge(prevBest.vol)} · updated ${ageString(prevBest.date)}</div>
+      </div>` : ''}
+      <div class="field" style="min-width:200px">
+        <label>2. Refine In</label>
+        <div style="font-size:18px;font-weight:600">${bestRefineRow.city}</div>
+        <div class="muted">${bestRefineRow.note} · effective return ${pct(bestRefineRow.totalReturn*100)}</div>
+      </div>
+      <div class="field" style="min-width:220px">
+        <label>3a. Highest Price To Sell</label>
+        <div style="font-size:18px;font-weight:600">${highestPriceSell.city}</div>
+        <div class="muted">${fmt(highestPriceSell.price)} silver · ${liquidityBadge(highestPriceSell.vol)} · profit/unit ${fmt(highestPriceSell.profitPerUnit)} · est. ${daysToSell(batchSize, highestPriceSell.vol)} for ${fmt(batchSize)} units</div>
+      </div>
+      <div class="field" style="min-width:220px">
+        <label>3b. Fastest Profit To Sell ${fastestSell.city===highestPriceSell.city?'(same city)':''}</label>
+        <div style="font-size:18px;font-weight:600">${fastestSell.city}</div>
+        <div class="muted">${fmt(fastestSell.price)} silver · ${liquidityBadge(fastestSell.vol)} · profit/unit ${fmt(fastestSell.profitPerUnit)} · est. ${daysToSell(batchSize, fastestSell.vol)} for ${fmt(batchSize)} units</div>
+      </div>
+      <div class="field" style="min-width:230px">
+        <label>Profit / Craft</label>
+        <div style="display:flex;gap:18px">
+          <div>
+            <div style="font-size:20px;font-weight:700" class="${cls(bestRefineRow.profit)}">${fmt(bestRefineRow.profit)}</div>
+            <div class="muted">${pct(bestRefineRow.margin)} · off ${highestPriceSell.city} (highest price)</div>
+          </div>
+          <div>
+            <div style="font-size:20px;font-weight:700" class="${cls(fastestSell.profitPerUnit)}">${fmt(fastestSell.profitPerUnit)}</div>
+            <div class="muted">${pct(marginFastest)} · off ${fastestSell.city} (fastest profit)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    ${fastestSell.city!==highestPriceSell.city ? `<div class="hint" style="margin-top:14px">
+      <b>${highestPriceSell.city}</b> has the best price (${fmt(highestPriceSell.price)}), but at ${fmt(highestPriceSell.vol)} units/day that's ~${daysToSell(batchSize, highestPriceSell.vol)} to clear a ${fmt(batchSize)}-unit batch.
+      <b>${fastestSell.city}</b> pays ${fmt(highestPriceSell.profitPerUnit-fastestSell.profitPerUnit)} less per unit but moves ${fmt(fastestSell.vol)} units/day — roughly ${(fastestSell.vol/(highestPriceSell.vol||1)).toFixed(1)}x the throughput — so the same batch clears in ~${daysToSell(batchSize, fastestSell.vol)} and converts to cash sooner.
+    </div>` : ''}`;
+  document.getElementById("r-pipeline").innerHTML = pipelineHtml;
+  document.getElementById("r-summary").style.display = "block";
+
+  // ---- Step 1 table ---- click a raw-material row to recalculate the whole
+  // pipeline as if you were buying from that city instead of the cheapest one.
+  let buyHtml = `<thead><tr><th>Material</th><th>City</th><th>Price</th><th>Volume</th><th>Last Updated</th></tr></thead><tbody>`;
+  rawCandidates.slice(0,7).forEach((c,i)=>{
+    const isSelected = selectedRawCity ? c.city===selectedRawCity : i===0;
+    buyHtml += `<tr class="raw-row" data-city="${c.city}" style="cursor:pointer;${isSelected?'background:rgba(224,162,48,.10)':''}">
+      <td>${i===0?'Raw':''} ${isSelected?'<span class="badge high">'+(selectedRawCity?'selected':'cheapest')+'</span>':''}</td>
+      <td>${c.city}</td><td>${fmt(c.price)}</td><td>${liquidityBadge(c.vol)}</td><td class="muted">${ageString(c.date)}</td>
+    </tr>`;
+  });
+  prevCandidates.slice(0,7).forEach((c,i)=>{
+    buyHtml += `<tr><td>${i===0?'Prev-Tier Bar <span class="badge high">cheapest</span>':''}</td><td>${c.city}</td><td>${fmt(c.price)}</td><td>${liquidityBadge(c.vol)}</td><td class="muted">${ageString(c.date)}</td></tr>`;
+  });
+  buyHtml += "</tbody>";
+  document.getElementById("r-buytable").innerHTML = buyHtml;
+  document.getElementById("r-buyresults").style.display = "block";
+  document.querySelectorAll("#r-buytable tr.raw-row").forEach(row=>{
+    row.addEventListener("click", ()=>{
+      R.selectedRawCity = row.dataset.city;
+      renderRefine();
+    });
+  });
+
+  // ---- Step 2 table ----
+  let refineHtml = `<thead><tr><th>City</th><th>Bonus Stack</th><th>Effective Return Rate</th><th>Material Cost/Craft</th><th>Profit/Craft</th><th>Margin</th></tr></thead><tbody>`;
+  for(const r of refineRows){
+    refineHtml += `<tr ${r.isSpec?'style="background:rgba(224,162,48,.06)"':''}>
+      <td>${r.city}</td>
+      <td class="muted">${r.note}</td>
+      <td>${pct(r.totalReturn*100)}</td>
+      <td>${fmt(r.materialCost)}</td>
+      <td class="${cls(r.profit)}">${fmt(r.profit)}</td>
+      <td class="${cls(r.profit)}">${pct(r.margin)}</td>
+    </tr>`;
+  }
+  refineHtml += "</tbody>";
+  document.getElementById("r-refinetable").innerHTML = refineHtml;
+  document.getElementById("r-refineresults").style.display = "block";
+
+  // ---- Step 3 table ---- ranked by profit velocity (profit/unit x daily volume),
+  // since the highest sticker price isn't useful if almost nothing trades there.
+  let sellHtml = `<thead><tr><th>City</th><th>Sell Price</th><th>Profit/Unit</th><th>Volume</th><th>Profit/Day (vol-adjusted)</th><th>Est. Days to Sell Batch</th><th>Last Updated</th></tr></thead><tbody>`;
+  for(const c of sellByVelocity){
+    const isFastest = c.city === fastestSell.city;
+    const isHighestPrice = c.city === highestPriceSell.city;
+    sellHtml += `<tr ${isFastest?'style="background:rgba(63,185,80,.06)"':''}>
+      <td>${c.city} ${isFastest?'<span class="badge high">fastest profit</span>':''}${isHighestPrice?'<span class="badge mid">highest price</span>':''}</td>
+      <td>${fmt(c.price)}</td>
+      <td class="${cls(c.profitPerUnit)}">${fmt(c.profitPerUnit)}</td>
+      <td>${liquidityBadge(c.vol)}</td>
+      <td class="${cls(c.velocity)}">${fmt(c.velocity)}</td>
+      <td>${daysToSell(batchSize, c.vol)}</td>
+      <td class="muted">${ageString(c.date)}</td>
+    </tr>`;
+  }
+  sellHtml += "</tbody>";
+  document.getElementById("r-selltable").innerHTML = sellHtml;
+  document.getElementById("r-sellresults").style.display = "block";
+}
+
+// ---------- BEST TIER & ENCHANT SCAN ----------
+let tierEnchantResults = null;
+function updateTierEnchantLineLabel(){
+  document.getElementById("r-tescan-line-label").textContent = document.getElementById("r-line").selectedOptions[0].textContent;
+}
+document.getElementById("r-line").addEventListener("change", updateTierEnchantLineLabel);
+updateTierEnchantLineLabel();
+
+document.getElementById("r-tescan-go").addEventListener("click", runTierEnchantScan);
+document.getElementById("r-tescan-sort-profit").addEventListener("click", ()=>{
+  document.getElementById("r-tescan-sort-profit").classList.add("on");
+  document.getElementById("r-tescan-sort-velocity").classList.remove("on");
+  if(tierEnchantResults) renderTierEnchantScan(tierEnchantResults, "profit");
+});
+document.getElementById("r-tescan-sort-velocity").addEventListener("click", ()=>{
+  document.getElementById("r-tescan-sort-velocity").classList.add("on");
+  document.getElementById("r-tescan-sort-profit").classList.remove("on");
+  if(tierEnchantResults) renderTierEnchantScan(tierEnchantResults, "velocity");
+});
+
+async function runTierEnchantScan(){
+  const statusEl = document.getElementById("r-tescan-status");
+  statusEl.className = "status"; statusEl.textContent = "Fetching prices & volume for every tier/enchant…";
+  try{
+    const lineKey = document.getElementById("r-line").value;
+    const line = LINES[lineKey];
+    const baseBonus = parseFloat(document.getElementById("r-basebonus").value)/100;
+    const specBonusPct = parseFloat(document.getElementById("r-specbonus").value)/100;
+    const useFocus = document.getElementById("r-focustoggle").classList.contains("on");
+    const focusBonus = useFocus ? parseFloat(document.getElementById("r-focusbonus").value)/100 : 0;
+    const stationFee = parseFloat(document.getElementById("r-fee").value);
+    const batchSize = parseFloat(document.getElementById("r-batch").value) || 100;
+    const tax = taxFrac(), fee = feeFrac();
+    const specCity = SPECIALIZATION_CITY[lineKey];
+
+    // Every tier/enchant combo for this line — same enchant rule as the materials
+    // universe (T2-T3 have no enchant variants, T4-T8 go .0-.4).
+    const combos = [];
+    for(let tier=2; tier<=8; tier++){
+      const maxEnchant = tier>=4 ? 4 : 0;
+      for(let ench=0; ench<=maxEnchant; ench++) combos.push({tier, enchant: ench});
+    }
+
+    const rawIds = combos.map(c=>buildItemId(line.raw, c.tier, c.enchant));
+    const refinedIds = combos.map(c=>buildItemId(line.refined, c.tier, c.enchant));
+    const allIds = [...new Set([...rawIds, ...refinedIds])];
+
+    const [priceMap, volMap] = await Promise.all([
+      fetchPrices(allIds, 1),
+      fetchVolumeMulti(allIds, 1),
+    ]);
+
+    const rows = [];
+    for(const combo of combos){
+      const {tier, enchant} = combo;
+      const ratio = RATIO[tier];
+      const rawId = buildItemId(line.raw, tier, enchant);
+      const refinedId = buildItemId(line.refined, tier, enchant);
+      const prevRawId = tier>2 ? buildItemId(line.refined, tier-1, enchant) : null;
+
+      const rawCandidates = CITIES.map(city=>{
+        const row = priceMap[`${rawId}|${city}`];
+        return {city, price: row?.sell_price_min||0, date: row?.sell_price_min_date};
+      }).filter(c=>c.price>0).sort((a,b)=>a.price-b.price);
+      const prevCandidates = prevRawId ? CITIES.map(city=>{
+        const row = priceMap[`${prevRawId}|${city}`];
+        return {city, price: row?.sell_price_min||0, date: row?.sell_price_min_date};
+      }).filter(c=>c.price>0).sort((a,b)=>a.price-b.price) : [];
+
+      if(!rawCandidates.length || (prevRawId && !prevCandidates.length)) continue;
+      const rawBest = rawCandidates[0];
+      const prevBest = prevCandidates[0] || null;
+
+      const sellCandidates = CITIES.map(city=>{
+        const row = priceMap[`${refinedId}|${city}`];
+        const sp = row?.sell_price_min||0;
+        return {city, price: sp, date: row?.sell_price_min_date, net: sp*(1-tax-fee), vol: (volMap[refinedId]||{})[city]||0};
+      }).filter(c=>c.price>0).sort((a,b)=>b.net-a.net);
+      if(!sellCandidates.length) continue;
+      const sellBest = sellCandidates[0];
+
+      let bestRefine = null;
+      for(const city of CITIES){
+        const cityBase = city==="Brecilien" ? 0 : baseBonus;
+        const spec = city===specCity ? specBonusPct : 0;
+        const totalBonus = cityBase + spec + focusBonus;
+        const totalReturn = totalBonus/(1+totalBonus);
+        const materialCost = (ratio.raw*rawBest.price + ratio.prev*(prevBest?prevBest.price:0)) * (1-totalReturn);
+        const profit = sellBest.net - materialCost - stationFee;
+        if(!bestRefine || profit>bestRefine.profit) bestRefine = {city, totalReturn, materialCost, profit, isSpec: city===specCity};
+      }
+      const margin = bestRefine.materialCost>0 ? bestRefine.profit/bestRefine.materialCost*100 : null;
+
+      sellCandidates.forEach(c=>{ c.profitPerUnit = c.net - bestRefine.materialCost - stationFee; c.velocity = c.profitPerUnit*c.vol; });
+      const fastestSell = [...sellCandidates].sort((a,b)=>b.velocity-a.velocity)[0];
+
+      rows.push({
+        tier, enchant,
+        refinedName: itemName(line.refined, tier, enchant),
+        rawBest, prevBest, refineCity: bestRefine.city, returnRate: bestRefine.totalReturn, isSpec: bestRefine.isSpec,
+        materialCost: bestRefine.materialCost, profit: bestRefine.profit, margin,
+        sellCity: sellBest.city, sellPrice: sellBest.price, sellVol: sellBest.vol, sellDate: sellBest.date,
+        fastestCity: fastestSell.city, fastestProfit: fastestSell.profitPerUnit, fastestVol: fastestSell.vol,
+        velocity: fastestSell.velocity, batchSize,
+      });
+    }
+
+    if(!rows.length) throw new Error("No tier/enchant combo for this line has active orders on both the raw material and refined good right now.");
+
+    tierEnchantResults = rows;
+    const sortMode = document.getElementById("r-tescan-sort-velocity").classList.contains("on") ? "velocity" : "profit";
+    renderTierEnchantScan(rows, sortMode);
+    statusEl.textContent = `Found data for ${rows.length} of ${combos.length} tier/enchant combos · region ${regionBase()}`;
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+    document.getElementById("r-tescan-results").style.display = "none";
+  }
+}
+
+function renderTierEnchantScan(rows, sortMode){
+  const sorted = [...rows].sort((a,b)=> sortMode==="velocity" ? b.velocity-a.velocity : b.profit-a.profit);
+  let html = `<thead><tr><th>Tier.Enchant</th><th>Item</th><th>Buy Raw In</th><th>Refine In</th><th>Return Rate</th><th>Material Cost</th><th>Sell In (best price)</th><th>Profit/Craft</th><th>Margin</th><th>Sell Volume</th><th>Profit/Day</th></tr></thead><tbody>`;
+  sorted.forEach(r=>{
+    html += `<tr ${r.isSpec?'style="background:rgba(224,162,48,.06)"':''}>
+      <td>T${r.tier}.${r.enchant}</td>
+      <td>${r.refinedName}</td>
+      <td>${r.rawBest.city} (${fmt(r.rawBest.price)})${r.prevBest?` + ${r.prevBest.city} (${fmt(r.prevBest.price)})`:''}</td>
+      <td>${r.refineCity}</td>
+      <td>${pct(r.returnRate*100)}</td>
+      <td>${fmt(r.materialCost)}</td>
+      <td>${r.sellCity} (${fmt(r.sellPrice)})</td>
+      <td class="${cls(r.profit)}">${fmt(r.profit)}</td>
+      <td class="${cls(r.profit)}">${pct(r.margin)}</td>
+      <td>${liquidityBadge(r.sellVol)}</td>
+      <td class="${cls(r.velocity)}">${fmt(r.velocity)}</td>
+    </tr>`;
+  });
+  html += "</tbody>";
+  document.getElementById("r-tescan-table").innerHTML = html;
+  document.getElementById("r-tescan-results").style.display = "block";
+}
+
+// ---------- MARKET FLIP TAB ----------
+document.getElementById("f-go").addEventListener("click", runFlip);
+
+async function runFlip(){
+  const statusEl = document.getElementById("f-status");
+  statusEl.className = "status"; statusEl.textContent = "Fetching live prices…";
+  try{
+    const itemId = document.getElementById("f-itemid").value.trim();
+    const quality = document.getElementById("f-quality").value;
+    const mode = document.getElementById("f-mode").value;
+    if(!itemId) throw new Error("Enter an item ID");
+
+    const [priceMap, volMap] = await Promise.all([
+      fetchPrices(itemId, quality),
+      fetchVolume(itemId, quality),
+    ]);
+
+    const tax = taxFrac(), fee = feeFrac();
+    const cityData = CITIES.map(city=>{
+      const row = priceMap[`${itemId}|${city}`] || {};
+      return {
+        city,
+        sellMin: row.sell_price_min || 0,
+        sellMinDate: row.sell_price_min_date,
+        buyMax: row.buy_price_max || 0,
+        buyMaxDate: row.buy_price_max_date,
+        vol: volMap[city] || 0,
+      };
+    });
+
+    const pairs = [];
+    for(const buyC of cityData){
+      if(!buyC.sellMin) continue;
+      for(const sellC of cityData){
+        if(buyC.city === sellC.city) continue;
+        const destPrice = mode === "sell" ? sellC.sellMin : sellC.buyMax;
+        const destDate = mode === "sell" ? sellC.sellMinDate : sellC.buyMaxDate;
+        if(!destPrice) continue;
+        const netRevenue = mode === "sell" ? destPrice*(1-tax-fee) : destPrice*(1-tax);
+        const profit = netRevenue - buyC.sellMin;
+        const margin = buyC.sellMin>0 ? profit/buyC.sellMin*100 : null;
+        const bottleneckVol = Math.min(buyC.vol, sellC.vol);
+        pairs.push({buyCity:buyC.city, sellCity:sellC.city, buyPrice:buyC.sellMin, buyDate:buyC.sellMinDate, sellPrice:destPrice, sellDate:destDate, profit, margin, buyVol:buyC.vol, sellVol:sellC.vol, bottleneckVol});
+      }
+    }
+    pairs.sort((a,b)=>b.profit-a.profit);
+
+    let html = `<thead><tr><th>Buy City</th><th>Sell City</th><th>Buy Price</th><th>Buy Updated</th><th>Sell Price</th><th>Sell Updated</th><th>Profit/Unit</th><th>Margin</th><th>Buy Vol</th><th>Sell Vol</th></tr></thead><tbody>`;
+    for(const p of pairs.slice(0,30)){
+      html += `<tr>
+        <td>${p.buyCity}</td>
+        <td>${p.sellCity}</td>
+        <td>${fmt(p.buyPrice)}</td>
+        <td class="muted">${ageString(p.buyDate)}</td>
+        <td>${fmt(p.sellPrice)}</td>
+        <td class="muted">${ageString(p.sellDate)}</td>
+        <td class="${cls(p.profit)}">${fmt(p.profit)}</td>
+        <td class="${cls(p.profit)}">${pct(p.margin)}</td>
+        <td>${liquidityBadge(p.buyVol)}</td>
+        <td>${liquidityBadge(p.sellVol)}</td>
+      </tr>`;
+    }
+    html += "</tbody>";
+    document.getElementById("f-table").innerHTML = html;
+    document.getElementById("f-results").style.display = "block";
+    statusEl.textContent = `Loaded ${itemId} (quality ${quality}) across ${CITIES.length} cities · region ${regionBase()}`;
+    if(!pairs.length) statusEl.textContent += " — no active orders found on both sides.";
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+  }
+}
+
+// ---------- BLACK MARKET SUB-TABS ----------
+document.getElementById("b-subtab-top").addEventListener("click", ()=>{
+  document.getElementById("b-subtab-top").classList.add("on");
+  document.getElementById("b-subtab-single").classList.remove("on");
+  document.getElementById("b-top-panel").style.display = "block";
+  document.getElementById("b-single-panel").style.display = "none";
+});
+document.getElementById("b-subtab-single").addEventListener("click", ()=>{
+  document.getElementById("b-subtab-single").classList.add("on");
+  document.getElementById("b-subtab-top").classList.remove("on");
+  document.getElementById("b-single-panel").style.display = "block";
+  document.getElementById("b-top-panel").style.display = "none";
+});
+
+// ---------- BLACK MARKET INVENTORY SCAN ----------
+document.querySelectorAll("#b-top-panel [data-cat]").forEach(btn=>{
+  btn.addEventListener("click", ()=> btn.classList.toggle("on"));
+});
+document.querySelectorAll("#b-top-panel [data-qual]").forEach(btn=>{
+  btn.addEventListener("click", ()=> btn.classList.toggle("on"));
+});
+document.getElementById("bt-go").addEventListener("click", runBMScan);
+
+async function runBMScan(){
+  const statusEl = document.getElementById("bt-status");
+  statusEl.className = "status";
+  try{
+    const minVol = parseFloat(document.getElementById("bt-minvol").value) || 0;
+    const tax = taxFrac();
+
+    const enabledCategories = new Set(
+      Array.from(document.querySelectorAll("#b-top-panel [data-cat]"))
+        .filter(b=>b.classList.contains("on"))
+        .map(b=>b.dataset.cat)
+    );
+    if(!enabledCategories.size) throw new Error("Select at least one category to scan.");
+
+    const qualities = Array.from(document.querySelectorAll("#b-top-panel [data-qual]"))
+      .filter(b=>b.classList.contains("on"))
+      .map(b=>parseInt(b.dataset.qual));
+    if(!qualities.length) throw new Error("Select at least one quality to scan.");
+
+    const universe = buildScanUniverse(enabledCategories);
+    const idChunks = chunk(universe.map(u=>u.id), 90);
+    statusEl.textContent = `Fetching prices for ${universe.length} items × ${qualities.length} quality level(s) (${idChunks.length} requests)…`;
+
+    const priceMaps = await mapWithConcurrency(idChunks, 6, c=>fetchPricesByQuality(c, qualities));
+    const priceMap = {};
+    for(const m of priceMaps) for(const id of Object.keys(m)){
+      priceMap[id] = Object.assign(priceMap[id]||{}, m[id]);
+    }
+
+    // Step 1: which (item, quality) combos actually have an active Black Market buy
+    // order. Quality must match on both sides — a quality-1 item can't fill a
+    // quality-5 buy order.
+    const listed = [];
+    for(const item of universe){
+      const byQuality = priceMap[item.id] || {};
+      for(const q of qualities){
+        const cityMap = byQuality[q] || {};
+        const bmRow = cityMap["Black Market"];
+        const bmBuy = bmRow?.buy_price_max || 0;
+        if(!bmBuy) continue;
+
+        // Step 2: compare against the cheapest royal-city source at the same quality.
+        let cheapest = null;
+        for(const city of CITIES){
+          const row = cityMap[city];
+          const price = row?.sell_price_min || 0;
+          if(!price) continue;
+          if(!cheapest || price<cheapest.price) cheapest = {city, price, date: row.sell_price_min_date};
+        }
+        const netBM = bmBuy*(1-tax);
+        const profit = cheapest ? netBM - cheapest.price : null;
+        const margin = cheapest && cheapest.price>0 ? profit/cheapest.price*100 : null;
+        listed.push({...item, quality:q, bmBuy, bmBuyDate: bmRow.buy_price_max_date, netBM, cheapest, profit, margin});
+      }
+    }
+
+    if(!listed.length) throw new Error("No items in the scanned categories/qualities currently have an active Black Market buy order.");
+
+    statusEl.textContent = `Fetching volume for ${listed.length} listed items…`;
+    const listedIdsUnique = [...new Set(listed.map(l=>l.id))];
+    const volChunks = chunk(listedIdsUnique, 90);
+    const volMaps = await mapWithConcurrency(volChunks, 6, c=>fetchVolumeMultiByQuality(c, qualities));
+    const volMap = {};
+    for(const m of volMaps) for(const id of Object.keys(m)){
+      volMap[id] = Object.assign(volMap[id]||{}, m[id]);
+    }
+
+    listed.forEach(l=>{
+      const qVol = (volMap[l.id]||{})[l.quality] || {};
+      l.bmVol = qVol["Black Market"] || 0;
+      l.sourceVol = l.cheapest ? qVol[l.cheapest.city] || 0 : 0;
+      l.bottleneckVol = Math.min(l.bmVol, l.sourceVol);
+      l.velocity = l.profit!==null ? l.profit*l.bottleneckVol : null;
+    });
+
+    const filtered = listed.filter(l=>l.bottleneckVol >= minVol);
+    if(!filtered.length) throw new Error(`No listed items clear the Min Volume filter (${minVol}/day) — try lowering it.`);
+
+    filtered.sort((a,b)=>(b.profit??-Infinity)-(a.profit??-Infinity));
+    renderBMScan(filtered);
+    document.getElementById("bt-results-title").textContent = `Black Market Inventory — ${listed.length} of ${universe.length * qualities.length} scanned (item, quality) combos have an active buy order`;
+    statusEl.textContent = `Scanned ${universe.length} items × ${qualities.length} quality level(s), ${listed.length} have a Black Market order, showing ${filtered.length} after the volume filter (region ${regionBase()}).`;
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+    document.getElementById("bt-results").style.display = "none";
+  }
+}
+
+function renderBMScan(rows){
+  let html = `<thead><tr><th>Item</th><th>Quality</th><th>BM Buy Order</th><th>BM Updated</th><th>BM Volume</th><th>Net BM Sale</th><th>Cheapest Source City</th><th>Source Price</th><th>Source Updated</th><th>Source Volume</th><th>Profit/Unit</th><th>Margin</th><th>Profit/Day</th></tr></thead><tbody>`;
+  for(const r of rows){
+    html += `<tr>
+      <td>${r.name} <span class="muted" style="font-size:10.5px">(${r.id})</span></td>
+      <td>${QUALITY_LABEL[r.quality]||r.quality}</td>
+      <td>${fmt(r.bmBuy)}</td>
+      <td class="muted">${ageString(r.bmBuyDate)}</td>
+      <td>${liquidityBadge(r.bmVol)}</td>
+      <td>${fmt(r.netBM)}</td>
+      <td>${r.cheapest ? r.cheapest.city : '<span class="muted">no royal-city listing</span>'}</td>
+      <td>${r.cheapest ? fmt(r.cheapest.price) : '—'}</td>
+      <td class="muted">${r.cheapest ? ageString(r.cheapest.date) : '—'}</td>
+      <td>${r.cheapest ? liquidityBadge(r.sourceVol) : '—'}</td>
+      <td class="${cls(r.profit)}">${r.profit!==null ? fmt(r.profit) : '—'}</td>
+      <td class="${cls(r.profit)}">${r.profit!==null ? pct(r.margin) : '—'}</td>
+      <td class="${cls(r.velocity)}">${r.velocity!==null ? fmt(r.velocity) : '—'}</td>
+    </tr>`;
+  }
+  html += "</tbody>";
+  document.getElementById("bt-table").innerHTML = html;
+  document.getElementById("bt-results").style.display = "block";
+}
+
+// ---------- SINGLE ITEM LOOKUP ----------
+document.getElementById("b-go").addEventListener("click", runBM);
+
+async function runBM(){
+  const statusEl = document.getElementById("b-status");
+  statusEl.className = "status"; statusEl.textContent = "Fetching live prices…";
+  try{
+    const itemId = document.getElementById("b-itemid").value.trim();
+    const quality = document.getElementById("b-quality").value;
+    if(!itemId) throw new Error("Enter an item ID");
+
+    const [priceMap, volMap] = await Promise.all([
+      fetchPrices(itemId, quality),
+      fetchVolume(itemId, quality),
+    ]);
+
+    const bmRow = priceMap[`${itemId}|Black Market`] || {};
+    const bmBuy = bmRow.buy_price_max || 0;
+    const bmBuyDate = bmRow.buy_price_max_date;
+    const bmVol = volMap["Black Market"] || 0;
+
+    const tax = taxFrac();
+    const netBM = bmBuy * (1 - tax);
+
+    const rows = CITIES.map(city=>{
+      const row = priceMap[`${itemId}|${city}`] || {};
+      const buyPrice = row.sell_price_min || 0;
+      const profit = buyPrice>0 ? netBM - buyPrice : null;
+      const margin = buyPrice>0 ? profit/buyPrice*100 : null;
+      return {city, buyPrice, buyDate: row.sell_price_min_date, vol: volMap[city]||0, profit, margin};
+    }).filter(r=>r.buyPrice>0).sort((a,b)=>b.profit-a.profit);
+
+    let html = `<thead><tr><th>Buy City</th><th>Buy Price</th><th>Buy Updated</th><th>City Volume</th><th>BM Buy Order</th><th>BM Updated</th><th>Net BM Sale (after tax)</th><th>BM Volume</th><th>Profit/Unit</th><th>Margin</th></tr></thead><tbody>`;
+    for(const r of rows){
+      html += `<tr>
+        <td>${r.city}</td>
+        <td>${fmt(r.buyPrice)}</td>
+        <td class="muted">${ageString(r.buyDate)}</td>
+        <td>${liquidityBadge(r.vol)}</td>
+        <td>${fmt(bmBuy)}</td>
+        <td class="muted">${ageString(bmBuyDate)}</td>
+        <td>${fmt(netBM)}</td>
+        <td>${liquidityBadge(bmVol)}</td>
+        <td class="${cls(r.profit)}">${fmt(r.profit)}</td>
+        <td class="${cls(r.profit)}">${pct(r.margin)}</td>
+      </tr>`;
+    }
+    html += "</tbody>";
+    document.getElementById("b-table").innerHTML = html;
+    document.getElementById("b-results").style.display = "block";
+    statusEl.textContent = bmBuy ? `Loaded ${itemId} (quality ${quality}) · region ${regionBase()}` : `No active Black Market buy order found for ${itemId} (quality ${quality}). This item may not be tradeable on the Black Market.`;
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+  }
+}
+</script>
+</body>
+</html>

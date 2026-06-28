@@ -1,0 +1,12 @@
+{
+  "name": "Albion Profit Calculator",
+  "short_name": "Albion Profit",
+  "description": "Live refining, market flip, and Black Market profit calculator using Albion Online Data Project",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#15171c",
+  "theme_color": "#15171c",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
