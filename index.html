@@ -82,8 +82,11 @@
 
 <nav>
   <button class="tabbtn active" data-tab="refine">Refining</button>
+  <button class="tabbtn" data-tab="craft">Crafting</button>
+  <button class="tabbtn" data-tab="enchant">Enchanting</button>
   <button class="tabbtn" data-tab="flip">Market Flip</button>
   <button class="tabbtn" data-tab="bm">Black Market Flip</button>
+  <button class="tabbtn" data-tab="hot">Hot Items</button>
 </nav>
 
 <main>
@@ -238,6 +241,231 @@
     <div class="panel" id="r-tescan-results" style="display:none;">
       <h2>Profit by Tier &amp; Enchant</h2>
       <div style="overflow-x:auto"><table id="r-tescan-table"></table></div>
+    </div>
+  </section>
+
+  <!-- ============ CRAFTING TAB ============ -->
+  <section class="tabsec" id="tab-craft">
+    <div class="panel">
+      <h2>Crafting Bonus Settings</h2>
+      <div class="row">
+        <div class="field">
+          <label>City Base Bonus %</label>
+          <input type="number" id="c-basebonus" value="18" min="0" max="100" step="0.1">
+        </div>
+        <div class="field">
+          <label>Specialization Bonus %</label>
+          <input type="number" id="c-specbonus" value="15" min="0" max="100" step="0.1">
+        </div>
+        <div class="field">
+          <label></label>
+          <button class="toggle on" id="c-focustoggle">Using Focus</button>
+        </div>
+        <div class="field">
+          <label>Focus Bonus %</label>
+          <input type="number" id="c-focusbonus" value="50" min="0" max="150" step="0.1">
+        </div>
+        <div class="field">
+          <label>Station Fee (silver)</label>
+          <input type="number" id="c-fee" value="0" min="0" step="1">
+        </div>
+        <div class="field">
+          <label>Batch Size (units)</label>
+          <input type="number" id="c-batch" value="100" min="1" step="1">
+        </div>
+      </div>
+      <div class="hint">
+        Crafting uses the same bonus-stacking model as Refining (<code>bonus/(1+bonus)</code>), but the numbers differ: crafting specialization is +15% (not +40%), and each weapon/armor line has its own specific bonus city rather than a resource-based one — e.g. Swords/Bows/Arcane Staff &amp; Leather Helmet/Shoes favor <b>Lymhurst</b>, Off-Hands favor <b>Martlock</b>, Capes/Bags favor <b>Brecilien</b>. The tool looks up the correct bonus city automatically. Recipes (material types &amp; quantities) are pulled directly from the game's own data files and don't change with tier &mdash; only the raw material prices do. These settings apply to both modes below.
+      </div>
+    </div>
+
+    <div class="row" style="margin-bottom:4px">
+      <button class="subtabbtn toggle on" data-subtab="single" id="c-subtab-single">Single Item</button>
+      <button class="subtabbtn toggle" data-subtab="top" id="c-subtab-top">Top Crafting Profits</button>
+    </div>
+
+    <!-- ---- SINGLE ITEM ---- -->
+    <div id="c-single-panel">
+      <div class="panel">
+        <h2>Item to Craft</h2>
+        <div class="row" id="c-picker"></div>
+        <div class="row" id="c-city-overrides" style="margin-top:10px"></div>
+        <div class="row" style="margin-top:10px">
+          <div class="field">
+            <label></label>
+            <button class="action" id="c-go">Calculate</button>
+          </div>
+        </div>
+        <div class="status" id="c-status"></div>
+      </div>
+
+      <div class="panel" id="c-summary" style="display:none;">
+        <h2>Recommended Pipeline</h2>
+        <div id="c-pipeline"></div>
+      </div>
+
+      <div class="panel" id="c-buyresults" style="display:none;">
+        <h2>Step 1 — Where to Buy Materials (cheapest first)</h2>
+        <div class="hint" style="margin-bottom:10px">One row per material required by the recipe, each sourced independently from whichever city is cheapest right now.</div>
+        <div style="overflow-x:auto"><table id="c-buytable"></table></div>
+      </div>
+
+      <div class="panel" id="c-craftresults" style="display:none;">
+        <h2>Step 2 — Where to Craft (specialization bonus by city)</h2>
+        <div class="hint" style="margin-bottom:10px">Material cost uses the cheapest-sourced prices from Step 1. Only the effective return rate changes per city here.</div>
+        <div style="overflow-x:auto"><table id="c-crafttable"></table></div>
+      </div>
+
+      <div class="panel" id="c-sellresults" style="display:none;">
+        <h2>Step 3 — Where to Sell (ranked by profit velocity)</h2>
+        <div class="hint" style="margin-bottom:10px">Ranked by Profit/Day = profit per unit × avg daily volume (last 7 days), same logic as Refining — a high sticker price in a dead city can lose to a smaller margin in a liquid one.</div>
+        <div style="overflow-x:auto"><table id="c-selltable"></table></div>
+      </div>
+    </div>
+
+    <!-- ---- TOP CRAFTING PROFITS SCAN ---- -->
+    <div id="c-top-panel" style="display:none;">
+      <div class="panel">
+        <h2>Scan Setup</h2>
+        <div class="row" style="margin-bottom:10px">
+          <div class="field">
+            <label>Categories</label>
+            <div class="row" style="gap:6px">
+              <button class="toggle on" data-cccat="weapons" id="ct-cat-weapons">Weapons</button>
+              <button class="toggle on" data-cccat="armor" id="ct-cat-armor">Armor</button>
+              <button class="toggle on" data-cccat="accessories" id="ct-cat-accessories">Accessories</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Min Volume (units/day)</label>
+            <input type="number" id="ct-minvol" value="5" min="0" step="1">
+          </div>
+          <div class="field">
+            <label></label>
+            <button class="action" id="ct-go">Scan Top 100</button>
+          </div>
+        </div>
+        <div class="hint">
+          Scans every craftable weapon/armor/accessory type (77 types) across Tiers 4&ndash;8 and Enchant .0&ndash;.4 (up to 1,925 combos), using the Crafting Bonus Settings above for every combo, and ranks each by its best profit/craft. Quality 1 (Normal) only. With all categories enabled this can take a minute or two &mdash; narrow the categories above for a faster scan.
+        </div>
+        <div class="status" id="ct-status"></div>
+      </div>
+      <div class="panel" id="ct-results" style="display:none;">
+        <h2>Top 100 Crafting Profits</h2>
+        <div class="row" style="margin-bottom:10px">
+          <button class="toggle on" id="ct-sort-profit">Sort: Profit/Craft</button>
+          <button class="toggle" id="ct-sort-velocity">Sort: Profit/Day (vol-adjusted)</button>
+        </div>
+        <div style="overflow-x:auto"><table id="ct-table"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ENCHANTING TAB ============ -->
+  <section class="tabsec" id="tab-enchant">
+    <div class="panel">
+      <h2>Enchanting Settings</h2>
+      <div class="row">
+        <div class="field">
+          <label>Station Fee (silver)</label>
+          <input type="number" id="e-fee" value="0" min="0" step="1">
+        </div>
+        <div class="field">
+          <label>Batch Size (units)</label>
+          <input type="number" id="e-batch" value="100" min="1" step="1">
+        </div>
+      </div>
+      <div class="hint">
+        Enchanting takes an existing item one level down from your target (e.g. buying a Normal item to reach .1) and applies a fixed quantity of Runes (.1), Souls (.2), or Relics (.3) &mdash; sourced from the game's own data, no city bonus or return-rate applies to this step, the rune/soul/relic cost is fixed. <b>.4 (Pristine) has no upgrade path</b> in the game's data &mdash; it can only be obtained by crafting directly with Pristine-tier materials, which is what the Crafting tab's Enchant option covers instead.
+        Quality carries through unchanged: enchanting doesn't change an item's quality (Normal/Good/Outstanding/etc.), only its enchantment level. These settings apply to both modes below.
+      </div>
+    </div>
+
+    <div class="row" style="margin-bottom:4px">
+      <button class="subtabbtn toggle on" data-subtab="single" id="e-subtab-single">Single Item</button>
+      <button class="subtabbtn toggle" data-subtab="top" id="e-subtab-top">Top Enchanting Profits</button>
+    </div>
+
+    <!-- ---- SINGLE ITEM ---- -->
+    <div id="e-single-panel">
+      <div class="panel">
+        <h2>Item to Enchant</h2>
+        <div class="row" id="e-picker"></div>
+        <div class="row" style="margin-top:10px">
+          <div class="field">
+            <label>Target Enchant Level</label>
+            <select id="e-target">
+              <option value="1">.1 (using Runes)</option>
+              <option value="2">.2 (using Souls)</option>
+              <option value="3">.3 (using Relics)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" id="e-city-overrides" style="margin-top:10px"></div>
+        <div class="row" style="margin-top:10px">
+          <div class="field">
+            <label></label>
+            <button class="action" id="e-go">Calculate</button>
+          </div>
+        </div>
+        <div class="status" id="e-status"></div>
+      </div>
+
+      <div class="panel" id="e-summary" style="display:none;">
+        <h2>Recommended Pipeline</h2>
+        <div id="e-pipeline"></div>
+      </div>
+
+      <div class="panel" id="e-buyresults" style="display:none;">
+        <h2>Step 1 — Where to Buy the Base Item &amp; Enchanting Material</h2>
+        <div style="overflow-x:auto"><table id="e-buytable"></table></div>
+      </div>
+
+      <div class="panel" id="e-sellresults" style="display:none;">
+        <h2>Step 2 — Where to Sell the Enchanted Item (ranked by profit velocity)</h2>
+        <div style="overflow-x:auto"><table id="e-selltable"></table></div>
+      </div>
+    </div>
+
+    <!-- ---- TOP ENCHANTING PROFITS SCAN ---- -->
+    <div id="e-top-panel" style="display:none;">
+      <div class="panel">
+        <h2>Scan Setup</h2>
+        <div class="row" style="margin-bottom:10px">
+          <div class="field">
+            <label>Categories</label>
+            <div class="row" style="gap:6px">
+              <button class="toggle on" data-eccat="weapons" id="et-cat-weapons">Weapons</button>
+              <button class="toggle on" data-eccat="armor" id="et-cat-armor">Armor</button>
+              <button class="toggle on" data-eccat="accessories" id="et-cat-accessories">Accessories</button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Min Volume (units/day)</label>
+            <input type="number" id="et-minvol" value="5" min="0" step="1">
+          </div>
+          <div class="field">
+            <label></label>
+            <button class="action" id="et-go">Scan Top 100</button>
+          </div>
+        </div>
+        <div class="hint">
+          Scans every enchantable weapon/armor/accessory type (77 types) across Tiers 4&ndash;8 and all 3 upgrade targets (.1 Runes, .2 Souls, .3 Relics) &mdash; up to 1,155 combos &mdash; and ranks each by profit. Quality 1 (Normal) only. With all categories enabled this can take a minute or two &mdash; narrow the categories above for a faster scan.
+        </div>
+        <div class="status" id="et-status"></div>
+      </div>
+      <div class="panel" id="et-results" style="display:none;">
+        <h2>Top 100 Enchanting Profits</h2>
+        <div class="row" style="margin-bottom:10px">
+          <button class="toggle on" id="et-sort-profit">Sort: Profit/Enchant</button>
+          <button class="toggle" id="et-sort-velocity">Sort: Profit/Day (vol-adjusted)</button>
+        </div>
+        <div style="overflow-x:auto"><table id="et-table"></table></div>
+      </div>
     </div>
   </section>
 
@@ -423,6 +651,65 @@
     </div>
   </section>
 
+  <!-- ============ HOT ITEMS TAB ============ -->
+  <section class="tabsec" id="tab-hot">
+    <div class="panel">
+      <h2>Fastest-Selling Items Setup</h2>
+      <div class="row">
+        <div class="field">
+          <label>City</label>
+          <select id="h-city">
+            <option value="Caerleon">Caerleon</option>
+            <option value="Bridgewatch">Bridgewatch</option>
+            <option value="Lymhurst">Lymhurst</option>
+            <option value="Martlock">Martlock</option>
+            <option value="Fort Sterling">Fort Sterling</option>
+            <option value="Thetford">Thetford</option>
+            <option value="Brecilien">Brecilien</option>
+            <option value="Black Market">Black Market</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="field">
+          <label>Categories</label>
+          <div class="row" style="gap:6px">
+            <button class="toggle on" data-hcat="materials" id="h-cat-materials">Materials</button>
+            <button class="toggle on" data-hcat="weapons" id="h-cat-weapons">Weapons</button>
+            <button class="toggle on" data-hcat="armor" id="h-cat-armor">Armor</button>
+            <button class="toggle on" data-hcat="accessories" id="h-cat-accessories">Accessories</button>
+            <button class="toggle on" data-hcat="consumables" id="h-cat-consumables">Consumables</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Qualities</label>
+          <div class="row" style="gap:6px">
+            <button class="toggle on" data-hqual="1" id="h-qual-1">1 Normal</button>
+            <button class="toggle" data-hqual="2" id="h-qual-2">2 Good</button>
+            <button class="toggle" data-hqual="3" id="h-qual-3">3 Outstanding</button>
+            <button class="toggle" data-hqual="4" id="h-qual-4">4 Excellent</button>
+            <button class="toggle" data-hqual="5" id="h-qual-5">5 Masterpiece</button>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <div class="field">
+          <label></label>
+          <button class="action" id="h-go">Scan Top 100</button>
+        </div>
+      </div>
+      <div class="hint">
+        Ranks every item in the selected categories by <b>average units traded/day over the last 7 days in the chosen city</b> &mdash; not price or profit, purely how fast it moves. Useful for picking what to stock a shop with, or checking whether an item you're about to craft/enchant/flip will actually sell once you have it.
+        First pass fetches volume only (fast); price is fetched afterward just for the top 100 results, for context.
+      </div>
+      <div class="status" id="h-status"></div>
+    </div>
+    <div class="panel" id="h-results" style="display:none;">
+      <h2 id="h-results-title">Fastest-Selling Items</h2>
+      <div style="overflow-x:auto"><table id="h-table"></table></div>
+    </div>
+  </section>
+
 </main>
 
 <script>
@@ -467,6 +754,17 @@ function equipmentName(base, tier, enchant){
   return enchant ? `${name} (.${enchant})` : name;
 }
 
+// Crafting recipes, crafting categories (for city specialty bonus), and enchant
+// upgrade requirements (Runes/Souls/Relics), extracted directly from the game's
+// own items.xml (ao-bin-dumps). Ratios are tier-invariant: the same resource
+// types/quantities apply at every tier T4-T8 for a given item.
+const CRAFT_DATA = {"CRAFT_RECIPES":{"MAIN_1HCROSSBOW":[["PLANKS",16],["METALBAR",8]],"MAIN_ARCANESTAFF":[["PLANKS",16],["METALBAR",8]],"MAIN_AXE":[["PLANKS",8],["METALBAR",16]],"MAIN_CURSEDSTAFF":[["PLANKS",16],["METALBAR",8]],"MAIN_DAGGER":[["METALBAR",12],["LEATHER",12]],"MAIN_FIRESTAFF":[["PLANKS",16],["METALBAR",8]],"MAIN_FROSTSTAFF":[["PLANKS",16],["METALBAR",8]],"MAIN_HAMMER":[["METALBAR",24]],"MAIN_HOLYSTAFF":[["PLANKS",16],["CLOTH",8]],"MAIN_MACE":[["METALBAR",16],["CLOTH",8]],"MAIN_NATURESTAFF":[["PLANKS",16],["CLOTH",8]],"MAIN_SPEAR":[["PLANKS",16],["METALBAR",8]],"MAIN_SWORD":[["METALBAR",16],["LEATHER",8]],"2H_ARCANESTAFF":[["PLANKS",20],["METALBAR",12]],"2H_AXE":[["PLANKS",12],["METALBAR",20]],"2H_BOW":[["PLANKS",32]],"2H_CLAWPAIR":[["METALBAR",12],["LEATHER",20]],"2H_CLAYMORE":[["METALBAR",20],["LEATHER",12]],"2H_CROSSBOW":[["PLANKS",20],["METALBAR",12]],"2H_CROSSBOWLARGE":[["PLANKS",20],["METALBAR",12]],"2H_CURSEDSTAFF":[["PLANKS",20],["METALBAR",12]],"2H_DAGGERPAIR":[["METALBAR",16],["LEATHER",16]],"2H_DEMONICSTAFF":[["PLANKS",20],["METALBAR",12]],"2H_DIVINESTAFF":[["PLANKS",20],["CLOTH",12]],"2H_DOUBLEBLADEDSTAFF":[["METALBAR",12],["LEATHER",20]],"2H_DUALSWORD":[["METALBAR",20],["LEATHER",12]],"2H_ENIGMATICSTAFF":[["PLANKS",20],["METALBAR",12]],"2H_FIRESTAFF":[["PLANKS",20],["METALBAR",12]],"2H_FLAIL":[["METALBAR",20],["CLOTH",12]],"2H_FROSTSTAFF":[["PLANKS",20],["METALBAR",12]],"2H_GLACIALSTAFF":[["PLANKS",20],["METALBAR",12]],"2H_GLAIVE":[["PLANKS",12],["METALBAR",20]],"2H_HALBERD":[["PLANKS",20],["METALBAR",12]],"2H_HAMMER":[["METALBAR",20],["CLOTH",12]],"2H_HOLYSTAFF":[["PLANKS",20],["CLOTH",12]],"2H_INFERNOSTAFF":[["PLANKS",20],["METALBAR",12]],"2H_IRONCLADEDSTAFF":[["METALBAR",12],["LEATHER",20]],"2H_LONGBOW":[["PLANKS",32]],"2H_MACE":[["METALBAR",20],["CLOTH",12]],"2H_NATURESTAFF":[["PLANKS",20],["CLOTH",12]],"2H_POLEHAMMER":[["METALBAR",20],["CLOTH",12]],"2H_QUARTERSTAFF":[["METALBAR",12],["LEATHER",20]],"2H_SPEAR":[["PLANKS",20],["METALBAR",12]],"2H_WARBOW":[["PLANKS",32]],"2H_WILDSTAFF":[["PLANKS",20],["CLOTH",12]],"OFF_BOOK":[["CLOTH",4],["LEATHER",4]],"OFF_SHIELD":[["PLANKS",4],["METALBAR",4]],"OFF_TORCH":[["PLANKS",4],["CLOTH",4]],"HEAD_CLOTH_SET1":[["CLOTH",8]],"HEAD_CLOTH_SET2":[["CLOTH",8]],"HEAD_CLOTH_SET3":[["CLOTH",8]],"HEAD_LEATHER_SET1":[["LEATHER",8]],"HEAD_LEATHER_SET2":[["LEATHER",8]],"HEAD_LEATHER_SET3":[["LEATHER",8]],"HEAD_PLATE_SET1":[["METALBAR",8]],"HEAD_PLATE_SET2":[["METALBAR",8]],"HEAD_PLATE_SET3":[["METALBAR",8]],"ARMOR_CLOTH_SET1":[["CLOTH",16]],"ARMOR_CLOTH_SET2":[["CLOTH",16]],"ARMOR_CLOTH_SET3":[["CLOTH",16]],"ARMOR_LEATHER_SET1":[["LEATHER",16]],"ARMOR_LEATHER_SET2":[["LEATHER",16]],"ARMOR_LEATHER_SET3":[["LEATHER",16]],"ARMOR_PLATE_SET1":[["METALBAR",16]],"ARMOR_PLATE_SET2":[["METALBAR",16]],"ARMOR_PLATE_SET3":[["METALBAR",16]],"SHOES_CLOTH_SET1":[["CLOTH",8]],"SHOES_CLOTH_SET2":[["CLOTH",8]],"SHOES_CLOTH_SET3":[["CLOTH",8]],"SHOES_LEATHER_SET1":[["LEATHER",8]],"SHOES_LEATHER_SET2":[["LEATHER",8]],"SHOES_LEATHER_SET3":[["LEATHER",8]],"SHOES_PLATE_SET1":[["METALBAR",8]],"SHOES_PLATE_SET2":[["METALBAR",8]],"SHOES_PLATE_SET3":[["METALBAR",8]],"BAG":[["CLOTH",8],["LEATHER",8]],"CAPE":[["CLOTH",4],["LEATHER",4]]},"CRAFT_CATEGORY":{"MAIN_1HCROSSBOW":"crossbow","MAIN_ARCANESTAFF":"arcanestaff","MAIN_AXE":"axe","MAIN_CURSEDSTAFF":"cursestaff","MAIN_DAGGER":"dagger","MAIN_FIRESTAFF":"firestaff","MAIN_FROSTSTAFF":"froststaff","MAIN_HAMMER":"hammer","MAIN_HOLYSTAFF":"holystaff","MAIN_MACE":"mace","MAIN_NATURESTAFF":"naturestaff","MAIN_SPEAR":"spear","MAIN_SWORD":"sword","2H_ARCANESTAFF":"arcanestaff","2H_AXE":"axe","2H_BOW":"bow","2H_CLAWPAIR":"dagger","2H_CLAYMORE":"sword","2H_CROSSBOW":"crossbow","2H_CROSSBOWLARGE":"crossbow","2H_CURSEDSTAFF":"cursestaff","2H_DAGGERPAIR":"dagger","2H_DEMONICSTAFF":"cursestaff","2H_DIVINESTAFF":"holystaff","2H_DOUBLEBLADEDSTAFF":"quarterstaff","2H_DUALSWORD":"sword","2H_ENIGMATICSTAFF":"arcanestaff","2H_FIRESTAFF":"firestaff","2H_FLAIL":"mace","2H_FROSTSTAFF":"froststaff","2H_GLACIALSTAFF":"froststaff","2H_GLAIVE":"spear","2H_HALBERD":"axe","2H_HAMMER":"hammer","2H_HOLYSTAFF":"holystaff","2H_INFERNOSTAFF":"firestaff","2H_IRONCLADEDSTAFF":"quarterstaff","2H_LONGBOW":"bow","2H_MACE":"mace","2H_NATURESTAFF":"naturestaff","2H_POLEHAMMER":"hammer","2H_QUARTERSTAFF":"quarterstaff","2H_SPEAR":"spear","2H_WARBOW":"bow","2H_WILDSTAFF":"naturestaff","OFF_BOOK":"offhand","OFF_SHIELD":"offhand","OFF_TORCH":"offhand","HEAD_CLOTH_SET1":"cloth_helmet","HEAD_CLOTH_SET2":"cloth_helmet","HEAD_CLOTH_SET3":"cloth_helmet","HEAD_LEATHER_SET1":"leather_helmet","HEAD_LEATHER_SET2":"leather_helmet","HEAD_LEATHER_SET3":"leather_helmet","HEAD_PLATE_SET1":"plate_helmet","HEAD_PLATE_SET2":"plate_helmet","HEAD_PLATE_SET3":"plate_helmet","ARMOR_CLOTH_SET1":"cloth_armor","ARMOR_CLOTH_SET2":"cloth_armor","ARMOR_CLOTH_SET3":"cloth_armor","ARMOR_LEATHER_SET1":"leather_armor","ARMOR_LEATHER_SET2":"leather_armor","ARMOR_LEATHER_SET3":"leather_armor","ARMOR_PLATE_SET1":"plate_armor","ARMOR_PLATE_SET2":"plate_armor","ARMOR_PLATE_SET3":"plate_armor","SHOES_CLOTH_SET1":"cloth_shoes","SHOES_CLOTH_SET2":"cloth_shoes","SHOES_CLOTH_SET3":"cloth_shoes","SHOES_LEATHER_SET1":"leather_shoes","SHOES_LEATHER_SET2":"leather_shoes","SHOES_LEATHER_SET3":"leather_shoes","SHOES_PLATE_SET1":"plate_shoes","SHOES_PLATE_SET2":"plate_shoes","SHOES_PLATE_SET3":"plate_shoes","BAG":"bag","CAPE":"cape"},"CRAFT_UPGRADE":{"MAIN_1HCROSSBOW":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_ARCANESTAFF":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_AXE":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_CURSEDSTAFF":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_DAGGER":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_FIRESTAFF":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_FROSTSTAFF":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_HAMMER":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_HOLYSTAFF":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_MACE":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_NATURESTAFF":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_SPEAR":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"MAIN_SWORD":{"1":["RUNE",144],"2":["SOUL",144],"3":["RELIC",144]},"2H_ARCANESTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_AXE":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_BOW":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_CLAWPAIR":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_CLAYMORE":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_CROSSBOW":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_CROSSBOWLARGE":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_CURSEDSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_DAGGERPAIR":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_DEMONICSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_DIVINESTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_DOUBLEBLADEDSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_DUALSWORD":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_ENIGMATICSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_FIRESTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_FLAIL":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_FROSTSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_GLACIALSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_GLAIVE":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_HALBERD":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_HAMMER":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_HOLYSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_INFERNOSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_IRONCLADEDSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_LONGBOW":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_MACE":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_NATURESTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_POLEHAMMER":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_QUARTERSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_SPEAR":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_WARBOW":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"2H_WILDSTAFF":{"1":["RUNE",192],"2":["SOUL",192],"3":["RELIC",192]},"OFF_BOOK":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"OFF_SHIELD":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"OFF_TORCH":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"HEAD_CLOTH_SET1":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"HEAD_CLOTH_SET2":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"HEAD_CLOTH_SET3":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"HEAD_LEATHER_SET1":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"HEAD_LEATHER_SET2":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"HEAD_LEATHER_SET3":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"HEAD_PLATE_SET1":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"HEAD_PLATE_SET2":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"HEAD_PLATE_SET3":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"ARMOR_CLOTH_SET1":{"1":["RUNE",96],"2":["SOUL",96],"3":["RELIC",96]},"ARMOR_CLOTH_SET2":{"1":["RUNE",96],"2":["SOUL",96],"3":["RELIC",96]},"ARMOR_CLOTH_SET3":{"1":["RUNE",96],"2":["SOUL",96],"3":["RELIC",96]},"ARMOR_LEATHER_SET1":{"1":["RUNE",96],"2":["SOUL",96],"3":["RELIC",96]},"ARMOR_LEATHER_SET2":{"1":["RUNE",96],"2":["SOUL",96],"3":["RELIC",96]},"ARMOR_LEATHER_SET3":{"1":["RUNE",96],"2":["SOUL",96],"3":["RELIC",96]},"ARMOR_PLATE_SET1":{"1":["RUNE",96],"2":["SOUL",96],"3":["RELIC",96]},"ARMOR_PLATE_SET2":{"1":["RUNE",96],"2":["SOUL",96],"3":["RELIC",96]},"ARMOR_PLATE_SET3":{"1":["RUNE",96],"2":["SOUL",96],"3":["RELIC",96]},"SHOES_CLOTH_SET1":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"SHOES_CLOTH_SET2":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"SHOES_CLOTH_SET3":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"SHOES_LEATHER_SET1":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"SHOES_LEATHER_SET2":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"SHOES_LEATHER_SET3":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"SHOES_PLATE_SET1":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"SHOES_PLATE_SET2":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"SHOES_PLATE_SET3":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]},"BAG":{"1":["RUNE",96],"2":["SOUL",96],"3":["RELIC",96]},"CAPE":{"1":["RUNE",48],"2":["SOUL",48],"3":["RELIC",48]}},"CRAFT_CITY_BONUS":{"sword":"Lymhurst","bow":"Lymhurst","arcanestaff":"Lymhurst","axe":"Martlock","quarterstaff":"Martlock","froststaff":"Martlock","crossbow":"Bridgewatch","dagger":"Bridgewatch","cursestaff":"Bridgewatch","mace":"Thetford","firestaff":"Thetford","naturestaff":"Thetford","hammer":"Fort Sterling","spear":"Fort Sterling","holystaff":"Fort Sterling","cloth_armor":"Fort Sterling","plate_helmet":"Fort Sterling","plate_armor":"Bridgewatch","cloth_shoes":"Bridgewatch","leather_helmet":"Lymhurst","leather_shoes":"Lymhurst","plate_shoes":"Martlock","leather_armor":"Thetford","cloth_helmet":"Thetford","offhand":"Martlock","cape":"Brecilien","bag":"Brecilien"}}
+;
+const CRAFT_RECIPES = CRAFT_DATA.CRAFT_RECIPES;
+const CRAFT_CATEGORY = CRAFT_DATA.CRAFT_CATEGORY;
+const CRAFT_UPGRADE = CRAFT_DATA.CRAFT_UPGRADE;
+const CRAFT_CITY_BONUS = CRAFT_DATA.CRAFT_CITY_BONUS;
+
 function buildMaterialsUniverse(){
   const bases = ["ORE","WOOD","FIBER","HIDE","METALBAR","PLANKS","CLOTH","LEATHER"];
   const items = [];
@@ -494,16 +792,19 @@ function buildWeaponsUniverse(){
   for(let tier=4; tier<=8; tier++){
     for(let ench=0; ench<=4; ench++){
       for(const t of WEAPON_1H){
-        const name = equipmentName(`MAIN_${t}`, tier, ench);
-        if(name) items.push({id: buildEquipmentId(`MAIN_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name});
+        const base = `MAIN_${t}`;
+        const name = equipmentName(base, tier, ench);
+        if(name) items.push({id: buildEquipmentId(base, tier, ench), category:"weapons", tier, enchant: ench, name, base});
       }
       for(const t of WEAPON_2H){
-        const name = equipmentName(`2H_${t}`, tier, ench);
-        if(name) items.push({id: buildEquipmentId(`2H_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name});
+        const base = `2H_${t}`;
+        const name = equipmentName(base, tier, ench);
+        if(name) items.push({id: buildEquipmentId(base, tier, ench), category:"weapons", tier, enchant: ench, name, base});
       }
       for(const t of OFFHAND_TYPES){
-        const name = equipmentName(`OFF_${t}`, tier, ench);
-        if(name) items.push({id: buildEquipmentId(`OFF_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name});
+        const base = `OFF_${t}`;
+        const name = equipmentName(base, tier, ench);
+        if(name) items.push({id: buildEquipmentId(base, tier, ench), category:"weapons", tier, enchant: ench, name, base});
       }
     }
   }
@@ -518,7 +819,7 @@ function buildArmorUniverse(){
           for(let set=1; set<=3; set++){
             const base = `${slot}_${line}_SET${set}`;
             const name = equipmentName(base, tier, ench);
-            if(name) items.push({id: buildEquipmentId(base, tier, ench), category:"armor", tier, enchant: ench, name});
+            if(name) items.push({id: buildEquipmentId(base, tier, ench), category:"armor", tier, enchant: ench, name, base});
           }
         }
       }
@@ -531,9 +832,9 @@ function buildAccessoriesUniverse(){
   for(let tier=4; tier<=8; tier++){
     for(let ench=0; ench<=4; ench++){
       const bagName = equipmentName("BAG", tier, ench);
-      if(bagName) items.push({id: buildEquipmentId("BAG", tier, ench), category:"accessories", tier, enchant: ench, name: bagName});
+      if(bagName) items.push({id: buildEquipmentId("BAG", tier, ench), category:"accessories", tier, enchant: ench, name: bagName, base:"BAG"});
       const capeName = equipmentName("CAPE", tier, ench);
-      if(capeName) items.push({id: buildEquipmentId("CAPE", tier, ench), category:"accessories", tier, enchant: ench, name: capeName});
+      if(capeName) items.push({id: buildEquipmentId("CAPE", tier, ench), category:"accessories", tier, enchant: ench, name: capeName, base:"CAPE"});
     }
   }
   return items;
@@ -755,26 +1056,31 @@ const pickerState = {}; // prefix -> {category, ...selections, tier, enchant, qu
 
 function pickerEl(prefix, suffix){ return document.getElementById(`${prefix}-p-${suffix}`); }
 
-function initItemPicker(prefix){
-  pickerState[prefix] = {category:"Materials"};
+const CATEGORY_LABELS = {
+  Materials: "Materials (Raw &amp; Refined)", Weapons: "Weapons", Armor: "Armor",
+  Accessories: "Accessories", Consumables: "Consumables",
+};
+
+// opts.categories restricts which categories are selectable (default: all 5).
+// opts.hideEnchant hides the Enchant select (used by the Enchanting tab, which
+// manages its own "target enchant level" control instead).
+function initItemPicker(prefix, opts){
+  opts = opts || {};
+  const categories = opts.categories || ["Materials","Weapons","Armor","Accessories","Consumables"];
+  pickerState[prefix] = {category: categories[0], onChange: opts.onChange || null};
   const root = document.getElementById(`${prefix}-picker`);
+  const catOptionsHtml = categories.map(c=>`<option value="${c}">${CATEGORY_LABELS[c]}</option>`).join("");
   root.innerHTML = `
     <div class="field" style="min-width:150px">
       <label>Category</label>
-      <select id="${prefix}-p-cat">
-        <option value="Materials">Materials (Raw &amp; Refined)</option>
-        <option value="Weapons">Weapons</option>
-        <option value="Armor">Armor</option>
-        <option value="Accessories">Accessories</option>
-        <option value="Consumables">Consumables</option>
-      </select>
+      <select id="${prefix}-p-cat">${catOptionsHtml}</select>
     </div>
     <div class="row" id="${prefix}-p-sub" style="gap:14px"></div>
     <div class="field">
       <label>Tier</label>
       <select id="${prefix}-p-tier"></select>
     </div>
-    <div class="field">
+    <div class="field" id="${prefix}-p-enchant-field" ${opts.hideEnchant?'style="display:none"':''}>
       <label>Enchant</label>
       <select id="${prefix}-p-enchant">
         <option value="0">.0 (Normal)</option>
@@ -1001,6 +1307,7 @@ function refreshPickerPreview(prefix){
     pickerEl(prefix,"sub").parentElement.after(previewEl);
   }
   previewEl.innerHTML = id ? `Selected: <b>${name}</b> <span class="muted">(${id})</span>` : `<span class="muted">No item resolved for this selection.</span>`;
+  if(pickerState[prefix].onChange) pickerState[prefix].onChange();
 }
 
 function getPickerItemId(prefix){
@@ -1854,6 +2161,906 @@ async function runBM(){
     statusEl.className = "status err";
     statusEl.textContent = "Error: " + err.message;
   }
+}
+
+// ==================== CRAFTING TAB ====================
+initItemPicker("c", {categories:["Weapons","Armor","Accessories"], onChange: refreshCraftCityOverrides});
+document.getElementById("c-go").addEventListener("click", runCraft);
+document.getElementById("c-focustoggle").addEventListener("click", (e)=>{
+  e.target.classList.toggle("on");
+  e.target.textContent = e.target.classList.contains("on") ? "Using Focus" : "Not Using Focus";
+});
+
+// Resolves the currently-picked base equipment type (e.g. "MAIN_SWORD", "HEAD_PLATE_SET1")
+// independent of tier/enchant, for looking up CRAFT_RECIPES/CRAFT_CATEGORY/CRAFT_UPGRADE.
+function getPickerBaseType(prefix){
+  const category = pickerState[prefix].category;
+  if(category === "Weapons"){
+    const hand = pickerEl(prefix,"hand").value;
+    return WEAPON_HAND_GROUPS[hand].prefix + pickerEl(prefix,"wtype").value;
+  }
+  if(category === "Armor"){
+    const slot = pickerEl(prefix,"slot").value;
+    const line = pickerEl(prefix,"armline").value;
+    const set = pickerEl(prefix,"set").value;
+    return `${slot}_${line}_SET${set}`;
+  }
+  if(category === "Accessories"){
+    return pickerEl(prefix,"acctype").value;
+  }
+  return null;
+}
+
+// Builds a <select> of the 7 royal cities plus an "Auto" default option.
+function cityOverrideSelect(id, label, autoLabel){
+  const options = CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
+  return `<div class="field">
+    <label>${label}</label>
+    <select id="${id}"><option value="">${autoLabel}</option>${options}</select>
+  </div>`;
+}
+
+// Rebuilds the per-material / craft-city / sell-city override selects whenever the
+// picked item changes, since the number of materials depends on the item's recipe.
+function refreshCraftCityOverrides(){
+  const container = document.getElementById("c-city-overrides");
+  const base = getPickerBaseType("c");
+  const recipe = base ? CRAFT_RECIPES[base] : null;
+  if(!recipe){ container.innerHTML = ""; return; }
+  let html = recipe.map(([res], i) => cityOverrideSelect(`c-mat-city-${i}`, `Buy ${res} (x${recipe[i][1]}) In`, "Auto (cheapest)")).join("");
+  html += cityOverrideSelect("c-craft-city", "Craft In", "Auto (best bonus)");
+  html += cityOverrideSelect("c-sell-city", "Sell In", "Auto (best price/velocity)");
+  container.innerHTML = html;
+}
+
+async function runCraft(){
+  const statusEl = document.getElementById("c-status");
+  statusEl.className = "status"; statusEl.textContent = "Fetching live prices & volumes…";
+  try{
+    const base = getPickerBaseType("c");
+    if(!base) throw new Error("No item resolved — check the picker selection above.");
+    const tier = parseInt(pickerEl("c","tier").value);
+    const enchant = parseInt(pickerEl("c","enchant").value) || 0;
+    const quality = getPickerQuality("c");
+
+    const recipe = CRAFT_RECIPES[base];
+    const category = CRAFT_CATEGORY[base];
+    const bonusCity = CRAFT_CITY_BONUS[category];
+    const itemId = buildEquipmentId(base, tier, enchant);
+    const itemLabel = equipmentName(base, tier, enchant) || itemId;
+
+    const baseBonus = parseFloat(document.getElementById("c-basebonus").value)/100;
+    const specBonusPct = parseFloat(document.getElementById("c-specbonus").value)/100;
+    const useFocus = document.getElementById("c-focustoggle").classList.contains("on");
+    const focusBonus = useFocus ? parseFloat(document.getElementById("c-focusbonus").value)/100 : 0;
+    const stationFee = parseFloat(document.getElementById("c-fee").value);
+    const batchSize = parseFloat(document.getElementById("c-batch").value) || 100;
+    const tax = taxFrac(), fee = feeFrac();
+
+    // City overrides ("" = Auto, use the cheapest/best/fastest city as before).
+    const matOverrides = recipe.map((_,i)=> document.getElementById(`c-mat-city-${i}`)?.value || "");
+    const craftOverride = document.getElementById("c-craft-city")?.value || "";
+    const sellOverride = document.getElementById("c-sell-city")?.value || "";
+
+    // Materials: build one id per recipe resource at this tier/enchant (enchanted
+    // materials use the _LEVELn@n resource suffix, same as Refining does).
+    const materialIds = recipe.map(([res]) => buildItemId(res, tier, enchant));
+    const allIds = [itemId, ...materialIds];
+
+    const [priceMap, sellVol] = await Promise.all([
+      fetchPrices(allIds, quality),
+      fetchVolume(itemId, quality),
+    ]);
+
+    const materialCandidates = recipe.map(([res, qty], i)=>{
+      const id = materialIds[i];
+      const candidates = CITIES.map(city=>{
+        const row = priceMap[`${id}|${city}`];
+        return {city, price: row?.sell_price_min||0, date: row?.sell_price_min_date};
+      }).filter(c=>c.price>0).sort((a,b)=>a.price-b.price);
+      const override = matOverrides[i];
+      const best = override ? (candidates.find(c=>c.city===override) || null) : (candidates[0] || null);
+      return {res, qty, id, best, candidates, override};
+    });
+
+    if(materialCandidates.some(m=>!m.best)){
+      const missing = materialCandidates.filter(m=>!m.best).map(m=> m.override ? `${m.id} in ${m.override}` : m.id).join(", ");
+      throw new Error(`No active sell orders found for: ${missing}`);
+    }
+
+    const sellCandidatesBase = CITIES.map(city=>{
+      const row = priceMap[`${itemId}|${city}`];
+      const sp = row?.sell_price_min||0;
+      return {city, price: sp, date: row?.sell_price_min_date, vol: sellVol[city]||0};
+    }).filter(c=>c.price>0);
+
+    if(!sellCandidatesBase.length) throw new Error(`No active sell orders found for ${itemLabel} (${itemId}) in any city right now.`);
+    if(sellOverride && !sellCandidatesBase.some(c=>c.city===sellOverride)) throw new Error(`No active sell orders found for ${itemLabel} (${itemId}) in ${sellOverride}.`);
+
+    const sellCandidates = sellCandidatesBase.map(c=>({...c, net: c.price*(1-tax-fee)})).sort((a,b)=>b.net-a.net);
+
+    const craftRows = CITIES.map(city=>{
+      const cityBase = city === "Brecilien" ? 0 : baseBonus;
+      const spec = city === bonusCity ? specBonusPct : 0;
+      const totalBonus = cityBase + spec + focusBonus;
+      const totalReturn = totalBonus / (1 + totalBonus);
+      const notes = [];
+      if(cityBase) notes.push(`base +${pct(cityBase*100)}`);
+      if(spec) notes.push(`specialty +${pct(spec*100)}`);
+      if(focusBonus) notes.push(`focus +${pct(focusBonus*100)}`);
+      const note = notes.length ? notes.join(", ") : "no bonus";
+      const materialCost = materialCandidates.reduce((sum,m)=>sum + m.qty*m.best.price, 0) * (1-totalReturn);
+      const profit = sellCandidates[0].net - materialCost - stationFee;
+      const margin = materialCost>0 ? profit/materialCost*100 : null;
+      return {city, totalReturn, materialCost, profit, margin, note, isSpec: city===bonusCity};
+    }).sort((a,b)=>b.profit-a.profit);
+
+    const bestCraftRow = craftOverride ? craftRows.find(r=>r.city===craftOverride) : craftRows[0];
+
+    sellCandidates.forEach(c=>{
+      c.profitPerUnit = c.net - bestCraftRow.materialCost - stationFee;
+      c.velocity = c.profitPerUnit * c.vol;
+    });
+    const sellByVelocity = [...sellCandidates].sort((a,b)=>b.velocity-a.velocity);
+    const fastestSell = sellByVelocity[0];
+    const highestPriceSell = sellCandidates[0];
+    const marginFastest = bestCraftRow.materialCost>0 ? fastestSell.profitPerUnit/bestCraftRow.materialCost*100 : null;
+    const selectedSell = sellOverride ? sellCandidates.find(c=>c.city===sellOverride) : null;
+    const marginSelected = selectedSell && bestCraftRow.materialCost>0 ? selectedSell.profitPerUnit/bestCraftRow.materialCost*100 : null;
+
+    const anyOverride = matOverrides.some(Boolean) || craftOverride || sellOverride;
+
+    const pipelineHtml = `
+      <div class="row" style="gap:24px">
+        ${materialCandidates.map(m=>`
+        <div class="field" style="min-width:190px">
+          <label>Buy ${m.res} (x${m.qty}) In ${m.override?'<span class="badge mid">selected</span>':''}</label>
+          <div style="font-size:16px;font-weight:600">${m.best.city}</div>
+          <div class="muted">${fmt(m.best.price)} silver · updated ${ageString(m.best.date)}</div>
+        </div>`).join("")}
+        <div class="field" style="min-width:200px">
+          <label>Craft In ${craftOverride?'<span class="badge mid">selected</span>':''}</label>
+          <div style="font-size:18px;font-weight:600">${bestCraftRow.city}</div>
+          <div class="muted">${bestCraftRow.note} · effective return ${pct(bestCraftRow.totalReturn*100)}</div>
+        </div>
+        ${selectedSell ? `
+        <div class="field" style="min-width:220px">
+          <label>Sell In <span class="badge mid">selected</span></label>
+          <div style="font-size:18px;font-weight:600">${selectedSell.city}</div>
+          <div class="muted">${fmt(selectedSell.price)} silver · ${liquidityBadge(selectedSell.vol)} · profit/unit ${fmt(selectedSell.profitPerUnit)} · est. ${daysToSell(batchSize, selectedSell.vol)} for ${fmt(batchSize)} units</div>
+        </div>
+        <div class="field" style="min-width:160px">
+          <label>Profit / Craft (selected cities)</label>
+          <div style="font-size:22px;font-weight:700" class="${cls(selectedSell.profitPerUnit)}">${fmt(selectedSell.profitPerUnit)}</div>
+          <div class="muted">${pct(marginSelected)} margin</div>
+        </div>` : `
+        <div class="field" style="min-width:220px">
+          <label>Highest Price To Sell</label>
+          <div style="font-size:18px;font-weight:600">${highestPriceSell.city}</div>
+          <div class="muted">${fmt(highestPriceSell.price)} silver · ${liquidityBadge(highestPriceSell.vol)} · profit/unit ${fmt(highestPriceSell.profitPerUnit)} · est. ${daysToSell(batchSize, highestPriceSell.vol)} for ${fmt(batchSize)} units</div>
+        </div>
+        <div class="field" style="min-width:220px">
+          <label>Fastest Profit To Sell ${fastestSell.city===highestPriceSell.city?'(same city)':''}</label>
+          <div style="font-size:18px;font-weight:600">${fastestSell.city}</div>
+          <div class="muted">${fmt(fastestSell.price)} silver · ${liquidityBadge(fastestSell.vol)} · profit/unit ${fmt(fastestSell.profitPerUnit)} · est. ${daysToSell(batchSize, fastestSell.vol)} for ${fmt(batchSize)} units</div>
+        </div>
+        <div class="field" style="min-width:230px">
+          <label>Profit / Craft</label>
+          <div style="display:flex;gap:18px">
+            <div>
+              <div style="font-size:20px;font-weight:700" class="${cls(bestCraftRow.profit)}">${fmt(bestCraftRow.profit)}</div>
+              <div class="muted">${pct(bestCraftRow.margin)} · off ${highestPriceSell.city} (highest price)</div>
+            </div>
+            <div>
+              <div style="font-size:20px;font-weight:700" class="${cls(fastestSell.profitPerUnit)}">${fmt(fastestSell.profitPerUnit)}</div>
+              <div class="muted">${pct(marginFastest)} · off ${fastestSell.city} (fastest profit)</div>
+            </div>
+          </div>
+        </div>`}
+      </div>
+      ${!selectedSell && fastestSell.city!==highestPriceSell.city ? `<div class="hint" style="margin-top:14px">
+        <b>${highestPriceSell.city}</b> has the best price (${fmt(highestPriceSell.price)}), but at ${fmt(highestPriceSell.vol)} units/day that's ~${daysToSell(batchSize, highestPriceSell.vol)} to clear a ${fmt(batchSize)}-unit batch.
+        <b>${fastestSell.city}</b> pays ${fmt(highestPriceSell.profitPerUnit-fastestSell.profitPerUnit)} less per unit but moves ${fmt(fastestSell.vol)} units/day, clearing the same batch in ~${daysToSell(batchSize, fastestSell.vol)}.
+      </div>` : ''}
+      ${anyOverride ? `<div class="hint" style="margin-top:10px">Using your selected cities where set, and Auto (cheapest/best) elsewhere. Change any city dropdown above and re-run Calculate to compare.</div>` : ''}`;
+    document.getElementById("c-pipeline").innerHTML = pipelineHtml;
+    document.getElementById("c-summary").style.display = "block";
+
+    let buyHtml = `<thead><tr><th>Material</th><th>City</th><th>Price</th><th>Last Updated</th></tr></thead><tbody>`;
+    materialCandidates.forEach(m=>{
+      m.candidates.slice(0,7).forEach(c=>{
+        const isChosen = c.city === m.best.city;
+        const label = isChosen ? `${m.res} (x${m.qty}) <span class="badge ${m.override?'mid':'high'}">${m.override?'selected':'cheapest'}</span>` : '';
+        buyHtml += `<tr ${isChosen?'style="background:rgba(224,162,48,.06)"':''}><td>${label}</td><td>${c.city}</td><td>${fmt(c.price)}</td><td class="muted">${ageString(c.date)}</td></tr>`;
+      });
+    });
+    buyHtml += "</tbody>";
+    document.getElementById("c-buytable").innerHTML = buyHtml;
+    document.getElementById("c-buyresults").style.display = "block";
+
+    let craftHtml = `<thead><tr><th>City</th><th>Bonus Stack</th><th>Effective Return Rate</th><th>Material Cost/Craft</th><th>Profit/Craft</th><th>Margin</th></tr></thead><tbody>`;
+    for(const r of craftRows){
+      const isChosen = r.city === bestCraftRow.city;
+      craftHtml += `<tr style="${r.isSpec?'background:rgba(224,162,48,.06);':''}${isChosen?'outline:2px solid var(--accent);outline-offset:-2px;':''}">
+        <td>${r.city} ${isChosen && craftOverride?'<span class="badge mid">selected</span>':''}</td>
+        <td class="muted">${r.note}</td>
+        <td>${pct(r.totalReturn*100)}</td>
+        <td>${fmt(r.materialCost)}</td>
+        <td class="${cls(r.profit)}">${fmt(r.profit)}</td>
+        <td class="${cls(r.profit)}">${pct(r.margin)}</td>
+      </tr>`;
+    }
+    craftHtml += "</tbody>";
+    document.getElementById("c-crafttable").innerHTML = craftHtml;
+    document.getElementById("c-craftresults").style.display = "block";
+
+    let sellHtml = `<thead><tr><th>City</th><th>Sell Price</th><th>Profit/Unit</th><th>Volume</th><th>Profit/Day</th><th>Est. Days to Sell Batch</th><th>Last Updated</th></tr></thead><tbody>`;
+    for(const c of sellByVelocity){
+      const isFastest = c.city === fastestSell.city;
+      const isHighestPrice = c.city === highestPriceSell.city;
+      const isSelected = selectedSell && c.city === selectedSell.city;
+      sellHtml += `<tr ${isFastest||isSelected?'style="background:rgba(63,185,80,.06)"':''}>
+        <td>${c.city} ${isSelected?'<span class="badge mid">selected</span>':''}${!selectedSell&&isFastest?'<span class="badge high">fastest profit</span>':''}${!selectedSell&&isHighestPrice?'<span class="badge mid">highest price</span>':''}</td>
+        <td>${fmt(c.price)}</td>
+        <td class="${cls(c.profitPerUnit)}">${fmt(c.profitPerUnit)}</td>
+        <td>${liquidityBadge(c.vol)}</td>
+        <td class="${cls(c.velocity)}">${fmt(c.velocity)}</td>
+        <td>${daysToSell(batchSize, c.vol)}</td>
+        <td class="muted">${ageString(c.date)}</td>
+      </tr>`;
+    }
+    sellHtml += "</tbody>";
+    document.getElementById("c-selltable").innerHTML = sellHtml;
+    document.getElementById("c-sellresults").style.display = "block";
+
+    statusEl.textContent = `Loaded ${itemLabel} (${itemId}) · category "${category}" · bonus city ${bonusCity} · region ${regionBase()}`;
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+    document.getElementById("c-summary").style.display = "none";
+    document.getElementById("c-buyresults").style.display = "none";
+    document.getElementById("c-craftresults").style.display = "none";
+    document.getElementById("c-sellresults").style.display = "none";
+  }
+}
+
+// ---------- CRAFTING SUB-TABS ----------
+document.getElementById("c-subtab-single").addEventListener("click", ()=>{
+  document.getElementById("c-subtab-single").classList.add("on");
+  document.getElementById("c-subtab-top").classList.remove("on");
+  document.getElementById("c-single-panel").style.display = "block";
+  document.getElementById("c-top-panel").style.display = "none";
+});
+document.getElementById("c-subtab-top").addEventListener("click", ()=>{
+  document.getElementById("c-subtab-top").classList.add("on");
+  document.getElementById("c-subtab-single").classList.remove("on");
+  document.getElementById("c-top-panel").style.display = "block";
+  document.getElementById("c-single-panel").style.display = "none";
+});
+
+// Classifies a CRAFT_RECIPES base code into the same weapons/armor/accessories
+// buckets used by the picker and the category toggles.
+function classifyCraftBase(base){
+  if(base.startsWith("MAIN_") || base.startsWith("2H_") || base.startsWith("OFF_")) return "weapons";
+  if(base === "BAG" || base === "CAPE") return "accessories";
+  return "armor";
+}
+
+// ---------- TOP CRAFTING PROFITS SCAN ----------
+document.querySelectorAll("#c-top-panel [data-cccat]").forEach(btn=>{
+  btn.addEventListener("click", ()=> btn.classList.toggle("on"));
+});
+document.getElementById("ct-go").addEventListener("click", runCraftTopScan);
+document.getElementById("ct-sort-profit").addEventListener("click", ()=>{
+  document.getElementById("ct-sort-profit").classList.add("on");
+  document.getElementById("ct-sort-velocity").classList.remove("on");
+  if(craftTopScanResults) renderCraftTopScan(craftTopScanResults, "profit");
+});
+document.getElementById("ct-sort-velocity").addEventListener("click", ()=>{
+  document.getElementById("ct-sort-velocity").classList.add("on");
+  document.getElementById("ct-sort-profit").classList.remove("on");
+  if(craftTopScanResults) renderCraftTopScan(craftTopScanResults, "velocity");
+});
+
+let craftTopScanResults = null;
+
+async function runCraftTopScan(){
+  const statusEl = document.getElementById("ct-status");
+  statusEl.className = "status";
+  try{
+    const enabledCategories = new Set(
+      Array.from(document.querySelectorAll("#c-top-panel [data-cccat]"))
+        .filter(b=>b.classList.contains("on"))
+        .map(b=>b.dataset.cccat)
+    );
+    if(!enabledCategories.size) throw new Error("Select at least one category to scan.");
+
+    const minVol = parseFloat(document.getElementById("ct-minvol").value) || 0;
+    const baseBonus = parseFloat(document.getElementById("c-basebonus").value)/100;
+    const specBonusPct = parseFloat(document.getElementById("c-specbonus").value)/100;
+    const useFocus = document.getElementById("c-focustoggle").classList.contains("on");
+    const focusBonus = useFocus ? parseFloat(document.getElementById("c-focusbonus").value)/100 : 0;
+    const stationFee = parseFloat(document.getElementById("c-fee").value);
+    const tax = taxFrac(), fee = feeFrac();
+
+    const bases = Object.keys(CRAFT_RECIPES).filter(b=>enabledCategories.has(classifyCraftBase(b)));
+    const combos = [];
+    for(const base of bases){
+      for(let tier=4; tier<=8; tier++){
+        for(let ench=0; ench<=4; ench++){
+          const name = equipmentName(base, tier, ench);
+          if(name) combos.push({base, tier, enchant: ench, id: buildEquipmentId(base, tier, ench), name});
+        }
+      }
+    }
+
+    // Collect every item id (the crafted good) plus every distinct material id
+    // (recipe resource at that tier/enchant) needed across all combos.
+    const itemIds = combos.map(c=>c.id);
+    const materialIdSet = new Set();
+    for(const combo of combos){
+      for(const [res] of CRAFT_RECIPES[combo.base]){
+        materialIdSet.add(buildItemId(res, combo.tier, combo.enchant));
+      }
+    }
+    const allIds = [...new Set([...itemIds, ...materialIdSet])];
+    const idChunks = chunk(allIds, 90);
+    statusEl.textContent = `Fetching prices for ${combos.length} craftable combos (${idChunks.length} requests)…`;
+
+    const priceMaps = await mapWithConcurrency(idChunks, 6, c=>fetchPrices(c, 1));
+    const priceMap = Object.assign({}, ...priceMaps);
+
+    const candidates = [];
+    for(const combo of combos){
+      const recipe = CRAFT_RECIPES[combo.base];
+      const category = CRAFT_CATEGORY[combo.base];
+      const bonusCity = CRAFT_CITY_BONUS[category];
+
+      const materialBests = [];
+      let missing = false;
+      for(const [res, qty] of recipe){
+        const matId = buildItemId(res, combo.tier, combo.enchant);
+        let best = null;
+        for(const city of CITIES){
+          const row = priceMap[`${matId}|${city}`];
+          const price = row?.sell_price_min || 0;
+          if(price>0 && (!best || price<best.price)) best = {price};
+        }
+        if(!best){ missing = true; break; }
+        materialBests.push({qty, price: best.price});
+      }
+      if(missing) continue;
+
+      let sellBest = null;
+      const sellRow = {};
+      for(const city of CITIES){
+        const row = priceMap[`${combo.id}|${city}`];
+        const price = row?.sell_price_min || 0;
+        if(price>0){
+          sellRow[city] = price;
+          const net = price*(1-tax-fee);
+          if(!sellBest || net>sellBest.net) sellBest = {city, price, net};
+        }
+      }
+      if(!sellBest) continue;
+
+      let bestCraft = null;
+      for(const city of CITIES){
+        const cityBase = city === "Brecilien" ? 0 : baseBonus;
+        const spec = city === bonusCity ? specBonusPct : 0;
+        const totalBonus = cityBase + spec + focusBonus;
+        const totalReturn = totalBonus/(1+totalBonus);
+        const materialCost = materialBests.reduce((s,m)=>s+m.qty*m.price, 0) * (1-totalReturn);
+        const profit = sellBest.net - materialCost - stationFee;
+        if(!bestCraft || profit>bestCraft.profit) bestCraft = {city, materialCost, profit};
+      }
+
+      if(bestCraft.profit>0){
+        candidates.push({...combo, sellCity: sellBest.city, sellPrice: sellBest.price, craftCity: bestCraft.city, materialCost: bestCraft.materialCost, profit: bestCraft.profit, margin: bestCraft.materialCost>0?bestCraft.profit/bestCraft.materialCost*100:null});
+      }
+    }
+
+    candidates.sort((a,b)=>b.profit-a.profit);
+    const top = candidates.slice(0,100);
+    if(!top.length) throw new Error("No profitable craft combos found across the scanned item set right now.");
+
+    statusEl.textContent = `Fetching volume for top ${top.length} candidates…`;
+    const volChunks = chunk(top.map(t=>t.id), 90);
+    const volMaps = await mapWithConcurrency(volChunks, 6, c=>fetchVolumeMulti(c, 1));
+    const volMap = Object.assign({}, ...volMaps);
+
+    top.forEach(t=>{
+      t.sellVol = (volMap[t.id]||{})[t.sellCity] || 0;
+      t.velocity = t.profit * t.sellVol;
+    });
+
+    const filtered = top.filter(t=>t.sellVol >= minVol);
+    if(!filtered.length) throw new Error(`No candidates clear the Min Volume filter (${minVol}/day) — try lowering it.`);
+
+    craftTopScanResults = filtered;
+    const sortMode = document.getElementById("ct-sort-velocity").classList.contains("on") ? "velocity" : "profit";
+    renderCraftTopScan(filtered, sortMode);
+    statusEl.textContent = `Scanned ${combos.length} combos, found ${candidates.length} profitable, showing top ${filtered.length} (region ${regionBase()}).`;
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+    document.getElementById("ct-results").style.display = "none";
+  }
+}
+
+function renderCraftTopScan(rows, sortMode){
+  const sorted = [...rows].sort((a,b)=> sortMode==="velocity" ? b.velocity-a.velocity : b.profit-a.profit);
+  let html = `<thead><tr><th>#</th><th>Item</th><th>Craft City</th><th>Sell City</th><th>Material Cost</th><th>Sell Price</th><th>Profit/Craft</th><th>Margin</th><th>Sell Vol</th><th>Profit/Day</th></tr></thead><tbody>`;
+  sorted.forEach((r,i)=>{
+    html += `<tr>
+      <td>${i+1}</td>
+      <td>${r.name} <span class="muted" style="font-size:10.5px">(${r.id})</span></td>
+      <td>${r.craftCity}</td>
+      <td>${r.sellCity}</td>
+      <td>${fmt(r.materialCost)}</td>
+      <td>${fmt(r.sellPrice)}</td>
+      <td class="${cls(r.profit)}">${fmt(r.profit)}</td>
+      <td class="${cls(r.profit)}">${pct(r.margin)}</td>
+      <td>${liquidityBadge(r.sellVol)}</td>
+      <td class="${cls(r.velocity)}">${fmt(r.velocity)}</td>
+    </tr>`;
+  });
+  html += "</tbody>";
+  document.getElementById("ct-table").innerHTML = html;
+  document.getElementById("ct-results").style.display = "block";
+}
+
+// ==================== ENCHANTING TAB ====================
+initItemPicker("e", {categories:["Weapons","Armor","Accessories"], hideEnchant:true, onChange: refreshEnchantCityOverrides});
+document.getElementById("e-go").addEventListener("click", runEnchant);
+document.getElementById("e-target").addEventListener("change", refreshEnchantCityOverrides);
+
+// Rebuilds the base-item / upgrade-material / sell-city override selects whenever the
+// picked item or target enchant level changes (the upgrade material type depends on target).
+function refreshEnchantCityOverrides(){
+  const container = document.getElementById("e-city-overrides");
+  const base = getPickerBaseType("e");
+  const targetEl = document.getElementById("e-target");
+  const target = targetEl ? parseInt(targetEl.value) : null;
+  const upgrade = (base && target) ? (CRAFT_UPGRADE[base]||{})[target] : null;
+  if(!upgrade){ container.innerHTML = ""; return; }
+  const [upgradeRes] = upgrade;
+  let html = cityOverrideSelect("e-base-city", "Buy Base Item In", "Auto (cheapest)");
+  html += cityOverrideSelect("e-upgrade-city", `Buy ${upgradeRes} In`, "Auto (cheapest)");
+  html += cityOverrideSelect("e-sell-city", "Sell Enchanted Item In", "Auto (best price/velocity)");
+  container.innerHTML = html;
+}
+
+async function runEnchant(){
+  const statusEl = document.getElementById("e-status");
+  statusEl.className = "status"; statusEl.textContent = "Fetching live prices & volumes…";
+  try{
+    const base = getPickerBaseType("e");
+    if(!base) throw new Error("No item resolved — check the picker selection above.");
+    const tier = parseInt(pickerEl("e","tier").value);
+    const quality = getPickerQuality("e");
+    const targetLevel = parseInt(document.getElementById("e-target").value);
+    const baseLevel = targetLevel - 1;
+
+    const upgrade = (CRAFT_UPGRADE[base]||{})[targetLevel];
+    if(!upgrade) throw new Error(`No upgrade path found to enchant level .${targetLevel} for this item.`);
+    const [upgradeRes, upgradeQty] = upgrade;
+
+    const baseItemId = buildEquipmentId(base, tier, baseLevel);
+    const targetItemId = buildEquipmentId(base, tier, targetLevel);
+    const baseLabel = equipmentName(base, tier, baseLevel) || baseItemId;
+    const targetLabel = equipmentName(base, tier, targetLevel) || targetItemId;
+    const upgradeItemId = buildItemId(upgradeRes, tier, 0);
+
+    const stationFee = parseFloat(document.getElementById("e-fee").value);
+    const batchSize = parseFloat(document.getElementById("e-batch").value) || 100;
+    const tax = taxFrac(), fee = feeFrac();
+
+    // City overrides ("" = Auto, use the cheapest/best/fastest city as before).
+    const baseOverride = document.getElementById("e-base-city")?.value || "";
+    const upgradeOverride = document.getElementById("e-upgrade-city")?.value || "";
+    const sellOverride = document.getElementById("e-sell-city")?.value || "";
+
+    const allIds = [baseItemId, targetItemId, upgradeItemId];
+    const [priceMap, targetVol] = await Promise.all([
+      fetchPrices(allIds, quality),
+      fetchVolume(targetItemId, quality),
+    ]);
+
+    const baseCandidates = CITIES.map(city=>{
+      const row = priceMap[`${baseItemId}|${city}`];
+      return {city, price: row?.sell_price_min||0, date: row?.sell_price_min_date};
+    }).filter(c=>c.price>0).sort((a,b)=>a.price-b.price);
+    if(!baseCandidates.length) throw new Error(`No active sell orders found for ${baseLabel} (${baseItemId}) in any city right now.`);
+    const baseBest = baseOverride ? (baseCandidates.find(c=>c.city===baseOverride) || null) : baseCandidates[0];
+    if(!baseBest) throw new Error(`No active sell orders found for ${baseLabel} (${baseItemId}) in ${baseOverride}.`);
+
+    // Runes/Souls/Relics are quality-1 only (they don't have quality tiers themselves).
+    const upgradeCandidates = CITIES.map(city=>{
+      const row = priceMap[`${upgradeItemId}|${city}`];
+      return {city, price: row?.sell_price_min||0, date: row?.sell_price_min_date};
+    }).filter(c=>c.price>0).sort((a,b)=>a.price-b.price);
+    if(!upgradeCandidates.length) throw new Error(`No active sell orders found for ${upgradeItemId} in any city right now.`);
+    const upgradeBest = upgradeOverride ? (upgradeCandidates.find(c=>c.city===upgradeOverride) || null) : upgradeCandidates[0];
+    if(!upgradeBest) throw new Error(`No active sell orders found for ${upgradeItemId} in ${upgradeOverride}.`);
+
+    const sellCandidatesBase = CITIES.map(city=>{
+      const row = priceMap[`${targetItemId}|${city}`];
+      const sp = row?.sell_price_min||0;
+      return {city, price: sp, date: row?.sell_price_min_date, vol: targetVol[city]||0};
+    }).filter(c=>c.price>0);
+    if(!sellCandidatesBase.length) throw new Error(`No active sell orders found for ${targetLabel} (${targetItemId}) in any city right now.`);
+    if(sellOverride && !sellCandidatesBase.some(c=>c.city===sellOverride)) throw new Error(`No active sell orders found for ${targetLabel} (${targetItemId}) in ${sellOverride}.`);
+
+    const sellCandidates = sellCandidatesBase.map(c=>({...c, net: c.price*(1-tax-fee)})).sort((a,b)=>b.net-a.net);
+
+    const totalCost = baseBest.price + upgradeQty*upgradeBest.price + stationFee;
+    sellCandidates.forEach(c=>{
+      c.profitPerUnit = c.net - totalCost;
+      c.velocity = c.profitPerUnit * c.vol;
+    });
+    const sellByVelocity = [...sellCandidates].sort((a,b)=>b.velocity-a.velocity);
+    const fastestSell = sellByVelocity[0];
+    const highestPriceSell = sellCandidates[0];
+    const marginHighest = totalCost>0 ? highestPriceSell.profitPerUnit/totalCost*100 : null;
+    const marginFastest = totalCost>0 ? fastestSell.profitPerUnit/totalCost*100 : null;
+    const selectedSell = sellOverride ? sellCandidates.find(c=>c.city===sellOverride) : null;
+    const marginSelected = selectedSell && totalCost>0 ? selectedSell.profitPerUnit/totalCost*100 : null;
+    const anyOverride = baseOverride || upgradeOverride || sellOverride;
+
+    const pipelineHtml = `
+      <div class="row" style="gap:24px">
+        <div class="field" style="min-width:200px">
+          <label>Buy Base (${baseLabel}) In ${baseOverride?'<span class="badge mid">selected</span>':''}</label>
+          <div style="font-size:16px;font-weight:600">${baseBest.city}</div>
+          <div class="muted">${fmt(baseBest.price)} silver · updated ${ageString(baseBest.date)}</div>
+        </div>
+        <div class="field" style="min-width:200px">
+          <label>Buy ${upgradeQty}x ${upgradeItemId} In ${upgradeOverride?'<span class="badge mid">selected</span>':''}</label>
+          <div style="font-size:16px;font-weight:600">${upgradeBest.city}</div>
+          <div class="muted">${fmt(upgradeBest.price)} silver each · ${fmt(upgradeQty*upgradeBest.price)} total · updated ${ageString(upgradeBest.date)}</div>
+        </div>
+        ${selectedSell ? `
+        <div class="field" style="min-width:220px">
+          <label>Sell (${targetLabel}) In <span class="badge mid">selected</span></label>
+          <div style="font-size:18px;font-weight:600">${selectedSell.city}</div>
+          <div class="muted">${fmt(selectedSell.price)} silver · ${liquidityBadge(selectedSell.vol)} · profit/unit ${fmt(selectedSell.profitPerUnit)} · est. ${daysToSell(batchSize, selectedSell.vol)} for ${fmt(batchSize)} units</div>
+        </div>
+        <div class="field" style="min-width:160px">
+          <label>Profit / Enchant (selected cities)</label>
+          <div style="font-size:22px;font-weight:700" class="${cls(selectedSell.profitPerUnit)}">${fmt(selectedSell.profitPerUnit)}</div>
+          <div class="muted">${pct(marginSelected)} margin</div>
+        </div>` : `
+        <div class="field" style="min-width:220px">
+          <label>Highest Price To Sell (${targetLabel})</label>
+          <div style="font-size:18px;font-weight:600">${highestPriceSell.city}</div>
+          <div class="muted">${fmt(highestPriceSell.price)} silver · ${liquidityBadge(highestPriceSell.vol)} · profit/unit ${fmt(highestPriceSell.profitPerUnit)} · est. ${daysToSell(batchSize, highestPriceSell.vol)} for ${fmt(batchSize)} units</div>
+        </div>
+        <div class="field" style="min-width:220px">
+          <label>Fastest Profit To Sell ${fastestSell.city===highestPriceSell.city?'(same city)':''}</label>
+          <div style="font-size:18px;font-weight:600">${fastestSell.city}</div>
+          <div class="muted">${fmt(fastestSell.price)} silver · ${liquidityBadge(fastestSell.vol)} · profit/unit ${fmt(fastestSell.profitPerUnit)} · est. ${daysToSell(batchSize, fastestSell.vol)} for ${fmt(batchSize)} units</div>
+        </div>
+        <div class="field" style="min-width:230px">
+          <label>Profit / Enchant</label>
+          <div style="display:flex;gap:18px">
+            <div>
+              <div style="font-size:20px;font-weight:700" class="${cls(highestPriceSell.profitPerUnit)}">${fmt(highestPriceSell.profitPerUnit)}</div>
+              <div class="muted">${pct(marginHighest)} · off ${highestPriceSell.city} (highest price)</div>
+            </div>
+            <div>
+              <div style="font-size:20px;font-weight:700" class="${cls(fastestSell.profitPerUnit)}">${fmt(fastestSell.profitPerUnit)}</div>
+              <div class="muted">${pct(marginFastest)} · off ${fastestSell.city} (fastest profit)</div>
+            </div>
+          </div>
+        </div>`}
+      </div>
+      ${!selectedSell && fastestSell.city!==highestPriceSell.city ? `<div class="hint" style="margin-top:14px">
+        <b>${highestPriceSell.city}</b> has the best price (${fmt(highestPriceSell.price)}), but at ${fmt(highestPriceSell.vol)} units/day that's ~${daysToSell(batchSize, highestPriceSell.vol)} to clear a ${fmt(batchSize)}-unit batch.
+        <b>${fastestSell.city}</b> pays ${fmt(highestPriceSell.profitPerUnit-fastestSell.profitPerUnit)} less per unit but moves ${fmt(fastestSell.vol)} units/day, clearing the same batch in ~${daysToSell(batchSize, fastestSell.vol)}.
+      </div>` : ''}
+      ${anyOverride ? `<div class="hint" style="margin-top:10px">Using your selected cities where set, and Auto (cheapest/best) elsewhere. Change any city dropdown above and re-run Calculate to compare.</div>` : ''}`;
+    document.getElementById("e-pipeline").innerHTML = pipelineHtml;
+    document.getElementById("e-summary").style.display = "block";
+
+    let buyHtml = `<thead><tr><th>Item</th><th>City</th><th>Price</th><th>Last Updated</th></tr></thead><tbody>`;
+    baseCandidates.slice(0,7).forEach(c=>{
+      const isChosen = c.city === baseBest.city;
+      const label = isChosen ? `Base: ${baseLabel} <span class="badge ${baseOverride?'mid':'high'}">${baseOverride?'selected':'cheapest'}</span>` : '';
+      buyHtml += `<tr ${isChosen?'style="background:rgba(224,162,48,.06)"':''}><td>${label}</td><td>${c.city}</td><td>${fmt(c.price)}</td><td class="muted">${ageString(c.date)}</td></tr>`;
+    });
+    upgradeCandidates.slice(0,7).forEach(c=>{
+      const isChosen = c.city === upgradeBest.city;
+      const label = isChosen ? `${upgradeItemId} (x${upgradeQty}) <span class="badge ${upgradeOverride?'mid':'high'}">${upgradeOverride?'selected':'cheapest'}</span>` : '';
+      buyHtml += `<tr ${isChosen?'style="background:rgba(224,162,48,.06)"':''}><td>${label}</td><td>${c.city}</td><td>${fmt(c.price)}</td><td class="muted">${ageString(c.date)}</td></tr>`;
+    });
+    buyHtml += "</tbody>";
+    document.getElementById("e-buytable").innerHTML = buyHtml;
+    document.getElementById("e-buyresults").style.display = "block";
+
+    let sellHtml = `<thead><tr><th>City</th><th>Sell Price</th><th>Profit/Unit</th><th>Volume</th><th>Profit/Day</th><th>Est. Days to Sell Batch</th><th>Last Updated</th></tr></thead><tbody>`;
+    for(const c of sellByVelocity){
+      const isFastest = c.city === fastestSell.city;
+      const isHighestPrice = c.city === highestPriceSell.city;
+      const isSelected = selectedSell && c.city === selectedSell.city;
+      sellHtml += `<tr ${isFastest||isSelected?'style="background:rgba(63,185,80,.06)"':''}>
+        <td>${c.city} ${isSelected?'<span class="badge mid">selected</span>':''}${!selectedSell&&isFastest?'<span class="badge high">fastest profit</span>':''}${!selectedSell&&isHighestPrice?'<span class="badge mid">highest price</span>':''}</td>
+        <td>${fmt(c.price)}</td>
+        <td class="${cls(c.profitPerUnit)}">${fmt(c.profitPerUnit)}</td>
+        <td>${liquidityBadge(c.vol)}</td>
+        <td class="${cls(c.velocity)}">${fmt(c.velocity)}</td>
+        <td>${daysToSell(batchSize, c.vol)}</td>
+        <td class="muted">${ageString(c.date)}</td>
+      </tr>`;
+    }
+    sellHtml += "</tbody>";
+    document.getElementById("e-selltable").innerHTML = sellHtml;
+    document.getElementById("e-sellresults").style.display = "block";
+
+    statusEl.textContent = `Loaded ${baseLabel} → ${targetLabel} (${upgradeQty}x ${upgradeItemId}) · region ${regionBase()}`;
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+    document.getElementById("e-summary").style.display = "none";
+    document.getElementById("e-buyresults").style.display = "none";
+    document.getElementById("e-sellresults").style.display = "none";
+  }
+}
+
+// ---------- ENCHANTING SUB-TABS ----------
+document.getElementById("e-subtab-single").addEventListener("click", ()=>{
+  document.getElementById("e-subtab-single").classList.add("on");
+  document.getElementById("e-subtab-top").classList.remove("on");
+  document.getElementById("e-single-panel").style.display = "block";
+  document.getElementById("e-top-panel").style.display = "none";
+});
+document.getElementById("e-subtab-top").addEventListener("click", ()=>{
+  document.getElementById("e-subtab-top").classList.add("on");
+  document.getElementById("e-subtab-single").classList.remove("on");
+  document.getElementById("e-top-panel").style.display = "block";
+  document.getElementById("e-single-panel").style.display = "none";
+});
+
+// ---------- TOP ENCHANTING PROFITS SCAN ----------
+document.querySelectorAll("#e-top-panel [data-eccat]").forEach(btn=>{
+  btn.addEventListener("click", ()=> btn.classList.toggle("on"));
+});
+document.getElementById("et-go").addEventListener("click", runEnchantTopScan);
+document.getElementById("et-sort-profit").addEventListener("click", ()=>{
+  document.getElementById("et-sort-profit").classList.add("on");
+  document.getElementById("et-sort-velocity").classList.remove("on");
+  if(enchantTopScanResults) renderEnchantTopScan(enchantTopScanResults, "profit");
+});
+document.getElementById("et-sort-velocity").addEventListener("click", ()=>{
+  document.getElementById("et-sort-velocity").classList.add("on");
+  document.getElementById("et-sort-profit").classList.remove("on");
+  if(enchantTopScanResults) renderEnchantTopScan(enchantTopScanResults, "velocity");
+});
+
+let enchantTopScanResults = null;
+
+async function runEnchantTopScan(){
+  const statusEl = document.getElementById("et-status");
+  statusEl.className = "status";
+  try{
+    const enabledCategories = new Set(
+      Array.from(document.querySelectorAll("#e-top-panel [data-eccat]"))
+        .filter(b=>b.classList.contains("on"))
+        .map(b=>b.dataset.eccat)
+    );
+    if(!enabledCategories.size) throw new Error("Select at least one category to scan.");
+
+    const minVol = parseFloat(document.getElementById("et-minvol").value) || 0;
+    const tax = taxFrac();
+
+    const bases = Object.keys(CRAFT_UPGRADE).filter(b=>enabledCategories.has(classifyCraftBase(b)));
+    const combos = [];
+    for(const base of bases){
+      for(let tier=4; tier<=8; tier++){
+        for(const target of [1,2,3]){
+          const upgrade = CRAFT_UPGRADE[base][target];
+          if(!upgrade) continue;
+          const baseLevel = target-1;
+          const baseId = buildEquipmentId(base, tier, baseLevel);
+          const targetId = buildEquipmentId(base, tier, target);
+          const targetName = equipmentName(base, tier, target);
+          if(!targetName) continue;
+          combos.push({base, tier, target, baseId, targetId, name: targetName, upgradeRes: upgrade[0], upgradeQty: upgrade[1]});
+        }
+      }
+    }
+
+    const itemIdSet = new Set();
+    const materialIdSet = new Set();
+    for(const combo of combos){
+      itemIdSet.add(combo.baseId);
+      itemIdSet.add(combo.targetId);
+      materialIdSet.add(buildItemId(combo.upgradeRes, combo.tier, 0));
+    }
+    const allIds = [...itemIdSet, ...materialIdSet];
+    const idChunks = chunk(allIds, 90);
+    statusEl.textContent = `Fetching prices for ${combos.length} enchanting combos (${idChunks.length} requests)…`;
+
+    const priceMaps = await mapWithConcurrency(idChunks, 6, c=>fetchPrices(c, 1));
+    const priceMap = Object.assign({}, ...priceMaps);
+
+    function cheapestOf(id){
+      let best = null;
+      for(const city of CITIES){
+        const row = priceMap[`${id}|${city}`];
+        const price = row?.sell_price_min || 0;
+        if(price>0 && (!best || price<best.price)) best = {city, price};
+      }
+      return best;
+    }
+
+    const candidates = [];
+    for(const combo of combos){
+      const baseBest = cheapestOf(combo.baseId);
+      if(!baseBest) continue;
+      const upgradeId = buildItemId(combo.upgradeRes, combo.tier, 0);
+      const upgradeBest = cheapestOf(upgradeId);
+      if(!upgradeBest) continue;
+
+      let sellBest = null;
+      for(const city of CITIES){
+        const row = priceMap[`${combo.targetId}|${city}`];
+        const price = row?.sell_price_min || 0;
+        if(price>0){
+          const net = price*(1-tax);
+          if(!sellBest || net>sellBest.net) sellBest = {city, price, net};
+        }
+      }
+      if(!sellBest) continue;
+
+      const totalCost = baseBest.price + combo.upgradeQty*upgradeBest.price;
+      const profit = sellBest.net - totalCost;
+      if(profit>0){
+        candidates.push({...combo, baseCity: baseBest.city, basePrice: baseBest.price, upgradeCity: upgradeBest.city, upgradePrice: upgradeBest.price, sellCity: sellBest.city, sellPrice: sellBest.price, totalCost, profit, margin: totalCost>0?profit/totalCost*100:null});
+      }
+    }
+
+    candidates.sort((a,b)=>b.profit-a.profit);
+    const top = candidates.slice(0,100);
+    if(!top.length) throw new Error("No profitable enchanting combos found across the scanned item set right now.");
+
+    statusEl.textContent = `Fetching volume for top ${top.length} candidates…`;
+    const volChunks = chunk(top.map(t=>t.targetId), 90);
+    const volMaps = await mapWithConcurrency(volChunks, 6, c=>fetchVolumeMulti(c, 1));
+    const volMap = Object.assign({}, ...volMaps);
+
+    top.forEach(t=>{
+      t.sellVol = (volMap[t.targetId]||{})[t.sellCity] || 0;
+      t.velocity = t.profit * t.sellVol;
+    });
+
+    const filtered = top.filter(t=>t.sellVol >= minVol);
+    if(!filtered.length) throw new Error(`No candidates clear the Min Volume filter (${minVol}/day) — try lowering it.`);
+
+    enchantTopScanResults = filtered;
+    const sortMode = document.getElementById("et-sort-velocity").classList.contains("on") ? "velocity" : "profit";
+    renderEnchantTopScan(filtered, sortMode);
+    statusEl.textContent = `Scanned ${combos.length} combos, found ${candidates.length} profitable, showing top ${filtered.length} (region ${regionBase()}).`;
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+    document.getElementById("et-results").style.display = "none";
+  }
+}
+
+function renderEnchantTopScan(rows, sortMode){
+  const sorted = [...rows].sort((a,b)=> sortMode==="velocity" ? b.velocity-a.velocity : b.profit-a.profit);
+  let html = `<thead><tr><th>#</th><th>Item</th><th>Base Buy City</th><th>Upgrade Mat Buy City</th><th>Sell City</th><th>Total Cost</th><th>Sell Price</th><th>Profit</th><th>Margin</th><th>Sell Vol</th><th>Profit/Day</th></tr></thead><tbody>`;
+  sorted.forEach((r,i)=>{
+    html += `<tr>
+      <td>${i+1}</td>
+      <td>${r.name} <span class="muted" style="font-size:10.5px">(${r.targetId})</span></td>
+      <td>${r.baseCity}</td>
+      <td>${r.upgradeCity} <span class="muted">(${r.upgradeQty}x)</span></td>
+      <td>${r.sellCity}</td>
+      <td>${fmt(r.totalCost)}</td>
+      <td>${fmt(r.sellPrice)}</td>
+      <td class="${cls(r.profit)}">${fmt(r.profit)}</td>
+      <td class="${cls(r.profit)}">${pct(r.margin)}</td>
+      <td>${liquidityBadge(r.sellVol)}</td>
+      <td class="${cls(r.velocity)}">${fmt(r.velocity)}</td>
+    </tr>`;
+  });
+  html += "</tbody>";
+  document.getElementById("et-table").innerHTML = html;
+  document.getElementById("et-results").style.display = "block";
+}
+
+// ==================== HOT ITEMS (FASTEST-SELLING BY CITY) ====================
+document.querySelectorAll("#tab-hot [data-hcat]").forEach(btn=>{
+  btn.addEventListener("click", ()=> btn.classList.toggle("on"));
+});
+document.querySelectorAll("#tab-hot [data-hqual]").forEach(btn=>{
+  btn.addEventListener("click", ()=> btn.classList.toggle("on"));
+});
+document.getElementById("h-go").addEventListener("click", runHotItemsScan);
+
+async function runHotItemsScan(){
+  const statusEl = document.getElementById("h-status");
+  statusEl.className = "status";
+  try{
+    const city = document.getElementById("h-city").value;
+    const enabledCategories = new Set(
+      Array.from(document.querySelectorAll("#tab-hot [data-hcat]"))
+        .filter(b=>b.classList.contains("on"))
+        .map(b=>b.dataset.hcat)
+    );
+    if(!enabledCategories.size) throw new Error("Select at least one category to scan.");
+
+    const qualities = Array.from(document.querySelectorAll("#tab-hot [data-hqual]"))
+      .filter(b=>b.classList.contains("on"))
+      .map(b=>parseInt(b.dataset.hqual));
+    if(!qualities.length) throw new Error("Select at least one quality to scan.");
+
+    const universe = buildScanUniverse(enabledCategories);
+    const idChunks = chunk(universe.map(u=>u.id), 90);
+    statusEl.textContent = `Fetching volume for ${universe.length} items × ${qualities.length} quality level(s) in ${city} (${idChunks.length} requests)…`;
+
+    const volMaps = await mapWithConcurrency(idChunks, 6, c=>fetchVolumeMultiByQuality(c, qualities));
+    const volMap = {};
+    for(const m of volMaps) for(const id of Object.keys(m)){
+      volMap[id] = Object.assign(volMap[id]||{}, m[id]);
+    }
+
+    const candidates = [];
+    for(const item of universe){
+      const byQuality = volMap[item.id] || {};
+      for(const q of qualities){
+        const vol = (byQuality[q]||{})[city] || 0;
+        if(vol>0) candidates.push({...item, quality:q, vol});
+      }
+    }
+    candidates.sort((a,b)=>b.vol-a.vol);
+    const top = candidates.slice(0,100);
+    if(!top.length) throw new Error(`No trading volume found for the scanned categories in ${city} right now.`);
+
+    statusEl.textContent = `Fetching prices for top ${top.length} items…`;
+    const topIdsUnique = [...new Set(top.map(t=>t.id))];
+    const priceChunks = chunk(topIdsUnique, 90);
+    const priceMaps = await mapWithConcurrency(priceChunks, 6, c=>fetchPricesByQuality(c, qualities));
+    const priceMap = {};
+    for(const m of priceMaps) for(const id of Object.keys(m)){
+      priceMap[id] = Object.assign(priceMap[id]||{}, m[id]);
+    }
+
+    top.forEach(t=>{
+      const cityMap = (priceMap[t.id]||{})[t.quality] || {};
+      const row = cityMap[city];
+      t.price = row?.sell_price_min || 0;
+      t.priceDate = row?.sell_price_min_date;
+    });
+
+    renderHotItems(top);
+    document.getElementById("h-results-title").textContent = `Fastest-Selling Items in ${city}`;
+    statusEl.textContent = `Scanned ${universe.length} items × ${qualities.length} quality level(s), showing top ${top.length} by volume in ${city} (region ${regionBase()}).`;
+  } catch(err){
+    statusEl.className = "status err";
+    statusEl.textContent = "Error: " + err.message;
+    document.getElementById("h-results").style.display = "none";
+  }
+}
+
+function renderHotItems(rows){
+  let html = `<thead><tr><th>#</th><th>Item</th><th>Tier.Enchant</th><th>Quality</th><th>Price</th><th>Volume/Day</th><th>Last Updated</th></tr></thead><tbody>`;
+  rows.forEach((r,i)=>{
+    html += `<tr>
+      <td>${i+1}</td>
+      <td>${r.name} <span class="muted" style="font-size:10.5px">(${r.id})</span></td>
+      <td>T${r.tier}.${r.enchant}</td>
+      <td>${QUALITY_LABEL[r.quality]||r.quality}</td>
+      <td>${r.price ? fmt(r.price) : '<span class="muted">no orders</span>'}</td>
+      <td>${liquidityBadge(r.vol)}</td>
+      <td class="muted">${r.price ? ageString(r.priceDate) : '—'}</td>
+    </tr>`;
+  });
+  html += "</tbody>";
+  document.getElementById("h-table").innerHTML = html;
+  document.getElementById("h-results").style.display = "block";
 }
 
 initItemPicker("f");
