@@ -300,9 +300,9 @@
           <b>Weapons:</b> all one- and two-handed weapon types + off-hands, T4&ndash;T8, enchant .0&ndash;.4.
           <b>Armor:</b> Head/Chest/Shoes &times; Cloth/Leather/Plate &times; all 3 set skins, T4&ndash;T8, enchant .0&ndash;.4.
           <b>Accessories:</b> bags &amp; capes, T4&ndash;T8, enchant .0&ndash;.4.
-          <b>Consumables:</b> potions &amp; food, T4&ndash;T8, enchant .0&ndash;.4 (capped to whatever enchant level actually exists for that item).
+          <b>Consumables:</b> potions &amp; food, T4&ndash;T8, enchant .0&ndash;.4 (each potion/food only exists at some of those tiers &mdash; e.g. Healing Potion is T4/T6 only &mdash; non-existent tiers are skipped automatically).
           All categories use quality 1 (Normal) only &mdash; including all 5 qualities would multiply the request count ~5x. <b>Not scanned:</b> mounts (don't follow this tier/enchant pattern), faction-reskinned gear (Avalon/Undead/Hellgate variants), and artifact/unique/quest items.
-          With everything enabled this is ~2,700 items and ~30 batched price requests &mdash; expect the scan to take up to a minute.
+          With everything enabled this is ~2,400 items and ~30 batched price requests &mdash; expect the scan to take up to a minute.
           Min Volume filters out routes where either city trades fewer than that many units/day on average (last 7 days) &mdash; raise it to cut illiquid noise.
         </div>
         <div class="status" id="t-status"></div>
@@ -480,6 +480,19 @@ function itemName(base, tier, enchant){
   const name = (BASE_NAMES[base]||{})[tier] || `${base} T${tier}`;
   return `${ENCHANT_PREFIX[enchant]||""}${name}`;
 }
+
+// Real in-game names for weapons/armor/accessories/consumables, keyed by the base id used
+// in buildEquipmentId (e.g. "MAIN_SWORD", "HEAD_PLATE_SET1", "BAG", "POTION_HEAL") -> {tier: name}.
+// Source: ao-bin-dumps (broderickhyman/ao-bin-dumps) items.txt. Unlike materials, equipment
+// names do not change with enchant level in-game (only the tier-rank prefix changes), and many
+// potion/food types only exist at specific tiers — a missing tier here means that item doesn't exist.
+const EQUIPMENT_NAMES = {"MAIN_1HCROSSBOW":{"4":"Adept's Light Crossbow","5":"Expert's Light Crossbow","6":"Master's Light Crossbow","7":"Grandmaster's Light Crossbow","8":"Elder's Light Crossbow"},"MAIN_ARCANESTAFF":{"4":"Adept's Arcane Staff","5":"Expert's Arcane Staff","6":"Master's Arcane Staff","7":"Grandmaster's Arcane Staff","8":"Elder's Arcane Staff"},"MAIN_AXE":{"4":"Adept's Battleaxe","5":"Expert's Battleaxe","6":"Master's Battleaxe","7":"Grandmaster's Battleaxe","8":"Elder's Battleaxe"},"MAIN_CURSEDSTAFF":{"4":"Adept's Cursed Staff","5":"Expert's Cursed Staff","6":"Master's Cursed Staff","7":"Grandmaster's Cursed Staff","8":"Elder's Cursed Staff"},"MAIN_DAGGER":{"4":"Adept's Dagger","5":"Expert's Dagger","6":"Master's Dagger","7":"Grandmaster's Dagger","8":"Elder's Dagger"},"MAIN_FIRESTAFF":{"4":"Adept's Fire Staff","5":"Expert's Fire Staff","6":"Master's Fire Staff","7":"Grandmaster's Fire Staff","8":"Elder's Fire Staff"},"MAIN_FROSTSTAFF":{"4":"Adept's Frost Staff","5":"Expert's Frost Staff","6":"Master's Frost Staff","7":"Grandmaster's Frost Staff","8":"Elder's Frost Staff"},"MAIN_HAMMER":{"4":"Adept's Hammer","5":"Expert's Hammer","6":"Master's Hammer","7":"Grandmaster's Hammer","8":"Elder's Hammer"},"MAIN_HOLYSTAFF":{"4":"Adept's Holy Staff","5":"Expert's Holy Staff","6":"Master's Holy Staff","7":"Grandmaster's Holy Staff","8":"Elder's Holy Staff"},"MAIN_MACE":{"4":"Adept's Mace","5":"Expert's Mace","6":"Master's Mace","7":"Grandmaster's Mace","8":"Elder's Mace"},"MAIN_NATURESTAFF":{"4":"Adept's Nature Staff","5":"Expert's Nature Staff","6":"Master's Nature Staff","7":"Grandmaster's Nature Staff","8":"Elder's Nature Staff"},"MAIN_SPEAR":{"4":"Adept's Spear","5":"Expert's Spear","6":"Master's Spear","7":"Grandmaster's Spear","8":"Elder's Spear"},"MAIN_SWORD":{"4":"Adept's Broadsword","5":"Expert's Broadsword","6":"Master's Broadsword","7":"Grandmaster's Broadsword","8":"Elder's Broadsword"},"2H_ARCANESTAFF":{"4":"Adept's Great Arcane Staff","5":"Expert's Great Arcane Staff","6":"Master's Great Arcane Staff","7":"Grandmaster's Great Arcane Staff","8":"Elder's Great Arcane Staff"},"2H_AXE":{"4":"Adept's Greataxe","5":"Expert's Greataxe","6":"Master's Greataxe","7":"Grandmaster's Greataxe","8":"The Hand of Khor"},"2H_BOW":{"4":"Adept's Bow","5":"Expert's Bow","6":"Master's Bow","7":"Grandmaster's Bow","8":"Elder's Bow"},"2H_CLAWPAIR":{"4":"Adept's Claws","5":"Expert's Claws","6":"Master's Claws","7":"Grandmaster's Claws","8":"Elder's Claws"},"2H_CLAYMORE":{"4":"Adept's Claymore","5":"Expert's Claymore","6":"Master's Claymore","7":"Grandmaster's Claymore","8":"Elder's Claymore"},"2H_CROSSBOW":{"4":"Adept's Crossbow","5":"Expert's Crossbow","6":"Master's Crossbow","7":"Grandmaster's Crossbow","8":"Elder's Crossbow"},"2H_CROSSBOWLARGE":{"4":"Adept's Heavy Crossbow","5":"Expert's Heavy Crossbow","6":"Master's Heavy Crossbow","7":"Grandmaster's Heavy Crossbow","8":"Elder's Heavy Crossbow"},"2H_CURSEDSTAFF":{"4":"Adept's Great Cursed Staff","5":"Expert's Great Cursed Staff","6":"Master's Great Cursed Staff","7":"Grandmaster's Great Cursed Staff","8":"Elder's Great Cursed Staff"},"2H_DAGGERPAIR":{"4":"Adept's Dagger Pair","5":"Expert's Dagger Pair","6":"Master's Dagger Pair","7":"Grandmaster's Dagger Pair","8":"Elder's Dagger Pair"},"2H_DEMONICSTAFF":{"4":"Adept's Demonic Staff","5":"Expert's Demonic Staff","6":"Master's Demonic Staff","7":"Grandmaster's Demonic Staff","8":"Elder's Demonic Staff"},"2H_DIVINESTAFF":{"4":"Adept's Divine Staff","5":"Expert's Divine Staff","6":"Master's Divine Staff","7":"Grandmaster's Divine Staff","8":"Elder's Divine Staff"},"2H_DOUBLEBLADEDSTAFF":{"4":"Adept's Double Bladed Staff","5":"Expert's Double Bladed Staff","6":"Master's Double Bladed Staff","7":"Grandmaster's Double Bladed Staff","8":"Elder's Double Bladed Staff"},"2H_DUALSWORD":{"4":"Adept's Dual Swords","5":"Expert's Dual Swords","6":"Master's Dual Swords","7":"Grandmaster's Dual Swords","8":"Elder's Dual Swords"},"2H_ENIGMATICSTAFF":{"4":"Adept's Enigmatic Staff","5":"Expert's Enigmatic Staff","6":"Master's Enigmatic Staff","7":"Grandmaster's Enigmatic Staff","8":"Elder's Enigmatic Staff"},"2H_FIRESTAFF":{"4":"Adept's Great Fire Staff","5":"Expert's Great Fire Staff","6":"Master's Great Fire Staff","7":"Grandmaster's Great Fire Staff","8":"Vendetta's Wrath"},"2H_FLAIL":{"4":"Adept's Morning Star","5":"Expert's Morning Star","6":"Master's Morning Star","7":"Grandmaster's Morning Star","8":"Elder's Morning Star"},"2H_FROSTSTAFF":{"4":"Adept's Great Frost Staff","5":"Expert's Great Frost Staff","6":"Master's Great Frost Staff","7":"Grandmaster's Great Frost Staff","8":"Elder's Great Frost Staff"},"2H_GLACIALSTAFF":{"4":"Adept's Glacial Staff","5":"Expert's Glacial Staff","6":"Master's Glacial Staff","7":"Grandmaster's Glacial Staff","8":"Elder's Glacial Staff"},"2H_GLAIVE":{"4":"Adept's Glaive","5":"Expert's Glaive","6":"Master's Glaive","7":"Grandmaster's Glaive","8":"Elder's Glaive"},"2H_HALBERD":{"4":"Adept's Halberd","5":"Expert's Halberd","6":"Master's Halberd","7":"Grandmaster's Halberd","8":"Elder's Halberd"},"2H_HAMMER":{"4":"Adept's Great Hammer","5":"Expert's Great Hammer","6":"Master's Great Hammer","7":"Grandmaster's Great Hammer","8":"Elder's Great Hammer"},"2H_HOLYSTAFF":{"4":"Adept's Great Holy Staff","5":"Expert's Great Holy Staff","6":"Master's Great Holy Staff","7":"Grandmaster's Great Holy Staff","8":"Elder's Great Holy Staff"},"2H_INFERNOSTAFF":{"4":"Adept's Infernal Staff","5":"Expert's Infernal Staff","6":"Master's Infernal Staff","7":"Grandmaster's Infernal Staff","8":"Elder's Infernal Staff"},"2H_IRONCLADEDSTAFF":{"4":"Adept's Iron-clad Staff","5":"Expert's Iron-clad Staff","6":"Master's Iron-clad Staff","7":"Grandmaster's Iron-clad Staff","8":"Elder's Iron-clad Staff"},"2H_LONGBOW":{"4":"Adept's Longbow","5":"Expert's Longbow","6":"Master's Longbow","7":"Grandmaster's Longbow","8":"Elder's Longbow"},"2H_MACE":{"4":"Adept's Heavy Mace","5":"Expert's Heavy Mace","6":"Master's Heavy Mace","7":"Grandmaster's Heavy Mace","8":"Elder's Heavy Mace"},"2H_NATURESTAFF":{"4":"Adept's Great Nature Staff","5":"Expert's Great Nature Staff","6":"Master's Great Nature Staff","7":"Grandmaster's Great Nature Staff","8":"Elder's Great Nature Staff"},"2H_POLEHAMMER":{"4":"Adept's Polehammer","5":"Expert's Polehammer","6":"Master's Polehammer","7":"Grandmaster's Polehammer","8":"Elder's Polehammer"},"2H_QUARTERSTAFF":{"4":"Adept's Quarterstaff","5":"Expert's Quarterstaff","6":"Master's Quarterstaff","7":"Grandmaster's Quarterstaff","8":"Elder's Quarterstaff"},"2H_SPEAR":{"4":"Adept's Pike","5":"Expert's Pike","6":"Master's Pike","7":"Grandmaster's Pike","8":"Elder's Pike"},"2H_WARBOW":{"4":"Adept's Warbow","5":"Expert's Warbow","6":"Master's Warbow","7":"Grandmaster's Warbow","8":"Elder's Warbow"},"2H_WILDSTAFF":{"4":"Adept's Wild Staff","5":"Expert's Wild Staff","6":"Master's Wild Staff","7":"Grandmaster's Wild Staff","8":"Elder's Wild Staff"},"OFF_BOOK":{"4":"Adept's Tome of Spells","5":"Expert's Tome of Spells","6":"Master's Tome of Spells","7":"Grandmaster's Tome of Spells","8":"Rosalia's Diary"},"OFF_SHIELD":{"4":"Adept's Shield","5":"Expert's Shield","6":"Master's Shield","7":"Grandmaster's Shield","8":"Elder's Shield"},"OFF_TORCH":{"4":"Adept's Torch","5":"Expert's Torch","6":"Master's Torch","7":"Grandmaster's Torch","8":"Elder's Torch"},"HEAD_CLOTH_SET1":{"4":"Adept's Scholar Cowl","5":"Expert's Scholar Cowl","6":"Master's Scholar Cowl","7":"Grandmaster's Scholar Cowl","8":"Elder's Scholar Cowl"},"HEAD_CLOTH_SET2":{"4":"Adept's Cleric Cowl","5":"Expert's Cleric Cowl","6":"Master's Cleric Cowl","7":"Grandmaster's Cleric Cowl","8":"Elder's Cleric Cowl"},"HEAD_CLOTH_SET3":{"4":"Adept's Mage Cowl","5":"Expert's Mage Cowl","6":"Master's Mage Cowl","7":"Grandmaster's Mage Cowl","8":"Elder's Mage Cowl"},"HEAD_LEATHER_SET1":{"4":"Adept's Mercenary Hood","5":"Expert's Mercenary Hood","6":"Master's Mercenary Hood","7":"Grandmaster's Mercenary Hood","8":"Elder's Mercenary Hood"},"HEAD_LEATHER_SET2":{"4":"Adept's Hunter Hood","5":"Expert's Hunter Hood","6":"Master's Hunter Hood","7":"Grandmaster's Hunter Hood","8":"Elder's Hunter Hood"},"HEAD_LEATHER_SET3":{"4":"Adept's Assassin Hood","5":"Expert's Assassin Hood","6":"Master's Assassin Hood","7":"Grandmaster's Assassin Hood","8":"Elder's Assassin Hood"},"HEAD_PLATE_SET1":{"4":"Adept's Soldier Helmet","5":"Expert's Soldier Helmet","6":"Master's Soldier Helmet","7":"Grandmaster's Soldier Helmet","8":"Elder's Soldier Helmet"},"HEAD_PLATE_SET2":{"4":"Adept's Knight Helmet","5":"Expert's Knight Helmet","6":"Master's Knight Helmet","7":"Grandmaster's Knight Helmet","8":"Elder's Knight Helmet"},"HEAD_PLATE_SET3":{"4":"Adept's Guardian Helmet","5":"Expert's Guardian Helmet","6":"Master's Guardian Helmet","7":"Grandmaster's Guardian Helmet","8":"Elder's Guardian Helmet"},"ARMOR_CLOTH_SET1":{"4":"Adept's Scholar Robe","5":"Expert's Scholar Robe","6":"Master's Scholar Robe","7":"Grandmaster's Scholar Robe","8":"Elder's Scholar Robe"},"ARMOR_CLOTH_SET2":{"4":"Adept's Cleric Robe","5":"Expert's Cleric Robe","6":"Master's Cleric Robe","7":"Grandmaster's Cleric Robe","8":"Elder's Cleric Robe"},"ARMOR_CLOTH_SET3":{"4":"Adept's Mage Robe","5":"Expert's Mage Robe","6":"Master's Mage Robe","7":"Grandmaster's Mage Robe","8":"Elder's Mage Robe"},"ARMOR_LEATHER_SET1":{"4":"Adept's Mercenary Jacket","5":"Expert's Mercenary Jacket","6":"Master's Mercenary Jacket","7":"Grandmaster's Mercenary Jacket","8":"Elder's Mercenary Jacket"},"ARMOR_LEATHER_SET2":{"4":"Adept's Hunter Jacket","5":"Expert's Hunter Jacket","6":"Master's Hunter Jacket","7":"Grandmaster's Hunter Jacket","8":"Elder's Hunter Jacket"},"ARMOR_LEATHER_SET3":{"4":"Adept's Assassin Jacket","5":"Expert's Assassin Jacket","6":"Master's Assassin Jacket","7":"Grandmaster's Assassin Jacket","8":"Elder's Assassin Jacket"},"ARMOR_PLATE_SET1":{"4":"Adept's Soldier Armor","5":"Expert's Soldier Armor","6":"Master's Soldier Armor","7":"Grandmaster's Soldier Armor","8":"Elder's Soldier Armor"},"ARMOR_PLATE_SET2":{"4":"Adept's Knight Armor","5":"Expert's Knight Armor","6":"Master's Knight Armor","7":"Grandmaster's Knight Armor","8":"Elder's Knight Armor"},"ARMOR_PLATE_SET3":{"4":"Adept's Guardian Armor","5":"Expert's Guardian Armor","6":"Master's Guardian Armor","7":"Grandmaster's Guardian Armor","8":"Elder's Guardian Armor"},"SHOES_CLOTH_SET1":{"4":"Adept's Scholar Sandals","5":"Expert's Scholar Sandals","6":"Master's Scholar Sandals","7":"Grandmaster's Scholar Sandals","8":"Elder's Scholar Sandals"},"SHOES_CLOTH_SET2":{"4":"Adept's Cleric Sandals","5":"Expert's Cleric Sandals","6":"Master's Cleric Sandals","7":"Grandmaster's Cleric Sandals","8":"Elder's Cleric Sandals"},"SHOES_CLOTH_SET3":{"4":"Adept's Mage Sandals","5":"Expert's Mage Sandals","6":"Master's Mage Sandals","7":"Grandmaster's Mage Sandals","8":"Elder's Mage Sandals"},"SHOES_LEATHER_SET1":{"4":"Adept's Mercenary Shoes","5":"Expert's Mercenary Shoes","6":"Master's Mercenary Shoes","7":"Grandmaster's Mercenary Shoes","8":"Elder's Mercenary Shoes"},"SHOES_LEATHER_SET2":{"4":"Adept's Hunter Shoes","5":"Expert's Hunter Shoes","6":"Master's Hunter Shoes","7":"Grandmaster's Hunter Shoes","8":"Elder's Hunter Shoes"},"SHOES_LEATHER_SET3":{"4":"Adept's Assassin Shoes","5":"Expert's Assassin Shoes","6":"Master's Assassin Shoes","7":"Grandmaster's Assassin Shoes","8":"Elder's Assassin Shoes"},"SHOES_PLATE_SET1":{"4":"Adept's Soldier Boots","5":"Expert's Soldier Boots","6":"Master's Soldier Boots","7":"Grandmaster's Soldier Boots","8":"Elder's Soldier Boots"},"SHOES_PLATE_SET2":{"4":"Adept's Knight Boots","5":"Expert's Knight Boots","6":"Master's Knight Boots","7":"Grandmaster's Knight Boots","8":"Elder's Knight Boots"},"SHOES_PLATE_SET3":{"4":"Adept's Guardian Boots","5":"Expert's Guardian Boots","6":"Master's Guardian Boots","7":"Grandmaster's Guardian Boots","8":"Elder's Guardian Boots"},"BAG":{"4":"Adept's Bag","5":"Expert's Bag","6":"Master's Bag","7":"Grandmaster's Bag","8":"Elder's Bag"},"CAPE":{"4":"Adept's Cape","5":"Expert's Cape","6":"Master's Cape","7":"Grandmaster's Cape","8":"Elder's Cape"},"POTION_CLEANSE":{"8":"Invisibility Potion"},"POTION_COOLDOWN":{"4":"Minor Poison Potion","6":"Poison Potion","8":"Major Poison Potion"},"POTION_ENERGY":{"4":"Energy Potion","6":"Major Energy Potion"},"POTION_HEAL":{"4":"Healing Potion","6":"Major Healing Potion"},"POTION_REVIVE":{"5":"Gigantify Potion","7":"Major Gigantify Potion"},"POTION_SLOWFIELD":{"5":"Sticky Potion","7":"Major Sticky Potion"},"POTION_STONESKIN":{"5":"Resistance Potion","7":"Major Resistance Potion"},"MEAL_GRILLEDFISH":{},"MEAL_OMELETTE":{"5":"Goose Omelette","7":"Pork Omelette"},"MEAL_OMELETTE_FISH":{"5":"Drybrook Crab Omelette","7":"Dusthole Crab Omelette"},"MEAL_PIE":{"5":"Goose Pie","7":"Pork Pie"},"MEAL_PIE_FISH":{"5":"Mountain Blindeye Pie","7":"Frostpeak Deadeye Pie"},"MEAL_ROAST":{"5":"Roast Goose","7":"Roast Pork"},"MEAL_ROAST_FISH":{"5":"Roasted Clearhaze Snapper","7":"Roasted Puremist Snapper"},"MEAL_SALAD":{"4":"Turnip Salad","6":"Potato Salad"},"MEAL_SALAD_FISH":{"4":"Midwater Octopus Salad","6":"Deepwater Kraken Salad"},"MEAL_SANDWICH":{"4":"Goat Sandwich","6":"Mutton Sandwich","8":"Beef Sandwich"},"MEAL_SANDWICH_FISH":{"4":"Stonestream Lurcher Sandwich","6":"Rushwater Lurcher Sandwich","8":"Thunderfall Lurcher Sandwich"},"MEAL_SEAWEEDSALAD":{},"MEAL_SOUP":{"5":"Cabbage Soup"},"MEAL_SOUP_FISH":{"5":"Blackbog Clam Soup"},"MEAL_STEW":{"4":"Goat Stew","6":"Mutton Stew","8":"Beef Stew"},"MEAL_STEW_FISH":{"4":"Greenriver Eel Stew","6":"Redspring Eel Stew","8":"Deadwater Eel Stew"}};
+function equipmentName(base, tier, enchant){
+  const name = (EQUIPMENT_NAMES[base]||{})[tier];
+  if(!name) return null;
+  return enchant ? `${name} (.${enchant})` : name;
+}
+
 function buildMaterialsUniverse(){
   const bases = ["ORE","WOOD","FIBER","HIDE","METALBAR","PLANKS","CLOTH","LEATHER"];
   const items = [];
@@ -499,19 +512,25 @@ const WEAPON_1H = ["1HCROSSBOW","ARCANESTAFF","AXE","CURSEDSTAFF","DAGGER","FIRE
 const WEAPON_2H = ["ARCANESTAFF","AXE","BOW","CLAWPAIR","CLAYMORE","CROSSBOW","CROSSBOWLARGE","CURSEDSTAFF","DAGGERPAIR","DEMONICSTAFF","DIVINESTAFF","DOUBLEBLADEDSTAFF","DUALSWORD","ENIGMATICSTAFF","FIRESTAFF","FLAIL","FROSTSTAFF","GLACIALSTAFF","GLAIVE","HALBERD","HAMMER","HOLYSTAFF","INFERNOSTAFF","IRONCLADEDSTAFF","LONGBOW","MACE","NATURESTAFF","POLEHAMMER","QUARTERSTAFF","SPEAR","WARBOW","WILDSTAFF"];
 const OFFHAND_TYPES = ["BOOK","SHIELD","TORCH"];
 const ARMOR_LINES = ["CLOTH","LEATHER","PLATE"];
-const ARMOR_SLOTS = {HEAD:"Helmet", ARMOR:"Chest", SHOES:"Boots"};
+const ARMOR_SLOTS = ["HEAD","ARMOR","SHOES"];
 const POTION_TYPES = ["CLEANSE","COOLDOWN","ENERGY","HEAL","REVIVE","SLOWFIELD","STONESKIN"];
 const FOOD_TYPES = ["GRILLEDFISH","OMELETTE","OMELETTE_FISH","PIE","PIE_FISH","ROAST","ROAST_FISH","SALAD","SALAD_FISH","SANDWICH","SANDWICH_FISH","SEAWEEDSALAD","SOUP","SOUP_FISH","STEW","STEW_FISH"];
-function humanize(str){
-  return str.split("_").map(w=>w.charAt(0)+w.slice(1).toLowerCase()).join(" ");
-}
 function buildWeaponsUniverse(){
   const items = [];
   for(let tier=4; tier<=8; tier++){
     for(let ench=0; ench<=4; ench++){
-      for(const t of WEAPON_1H) items.push({id: buildEquipmentId(`MAIN_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${humanize(t)}`});
-      for(const t of WEAPON_2H) items.push({id: buildEquipmentId(`2H_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${humanize(t)} (2H)`});
-      for(const t of OFFHAND_TYPES) items.push({id: buildEquipmentId(`OFF_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${humanize(t)} (Off-Hand)`});
+      for(const t of WEAPON_1H){
+        const name = equipmentName(`MAIN_${t}`, tier, ench);
+        if(name) items.push({id: buildEquipmentId(`MAIN_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name});
+      }
+      for(const t of WEAPON_2H){
+        const name = equipmentName(`2H_${t}`, tier, ench);
+        if(name) items.push({id: buildEquipmentId(`2H_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name});
+      }
+      for(const t of OFFHAND_TYPES){
+        const name = equipmentName(`OFF_${t}`, tier, ench);
+        if(name) items.push({id: buildEquipmentId(`OFF_${t}`, tier, ench), category:"weapons", tier, enchant: ench, name});
+      }
     }
   }
   return items;
@@ -520,10 +539,12 @@ function buildArmorUniverse(){
   const items = [];
   for(let tier=4; tier<=8; tier++){
     for(let ench=0; ench<=4; ench++){
-      for(const slot of Object.keys(ARMOR_SLOTS)){
+      for(const slot of ARMOR_SLOTS){
         for(const line of ARMOR_LINES){
           for(let set=1; set<=3; set++){
-            items.push({id: buildItemId(`${slot}_${line}_SET${set}`, tier, ench), category:"armor", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${line} ${ARMOR_SLOTS[slot]} (Set ${set})`});
+            const base = `${slot}_${line}_SET${set}`;
+            const name = equipmentName(base, tier, ench);
+            if(name) items.push({id: buildEquipmentId(base, tier, ench), category:"armor", tier, enchant: ench, name});
           }
         }
       }
@@ -535,8 +556,10 @@ function buildAccessoriesUniverse(){
   const items = [];
   for(let tier=4; tier<=8; tier++){
     for(let ench=0; ench<=4; ench++){
-      items.push({id: buildEquipmentId("BAG", tier, ench), category:"accessories", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} Bag`});
-      items.push({id: buildEquipmentId("CAPE", tier, ench), category:"accessories", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} Cape`});
+      const bagName = equipmentName("BAG", tier, ench);
+      if(bagName) items.push({id: buildEquipmentId("BAG", tier, ench), category:"accessories", tier, enchant: ench, name: bagName});
+      const capeName = equipmentName("CAPE", tier, ench);
+      if(capeName) items.push({id: buildEquipmentId("CAPE", tier, ench), category:"accessories", tier, enchant: ench, name: capeName});
     }
   }
   return items;
@@ -545,8 +568,14 @@ function buildConsumablesUniverse(){
   const items = [];
   for(let tier=4; tier<=8; tier++){
     for(let ench=0; ench<=4; ench++){
-      for(const t of POTION_TYPES) items.push({id: buildEquipmentId(`POTION_${t}`, tier, ench), category:"consumables", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${humanize(t)} Potion`});
-      for(const t of FOOD_TYPES) items.push({id: buildEquipmentId(`MEAL_${t}`, tier, ench), category:"consumables", tier, enchant: ench, name: `${ENCHANT_PREFIX[ench]}T${tier} ${humanize(t)}`});
+      for(const t of POTION_TYPES){
+        const name = equipmentName(`POTION_${t}`, tier, ench);
+        if(name) items.push({id: buildEquipmentId(`POTION_${t}`, tier, ench), category:"consumables", tier, enchant: ench, name});
+      }
+      for(const t of FOOD_TYPES){
+        const name = equipmentName(`MEAL_${t}`, tier, ench);
+        if(name) items.push({id: buildEquipmentId(`MEAL_${t}`, tier, ench), category:"consumables", tier, enchant: ench, name});
+      }
     }
   }
   return items;
