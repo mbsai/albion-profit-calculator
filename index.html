@@ -322,21 +322,8 @@
     <div id="f-single-panel" style="display:none;">
       <div class="panel">
         <h2>Market Flip Setup</h2>
-        <div class="row">
-          <div class="field" style="min-width:260px">
-            <label>Item ID (e.g. T4_ORE, T6_LEATHER, T5_HEAD_PLATE_SET1@2)</label>
-            <input type="text" id="f-itemid" value="T4_METALBAR" style="width:100%">
-          </div>
-          <div class="field">
-            <label>Quality</label>
-            <select id="f-quality">
-              <option value="1">1 Normal</option>
-              <option value="2">2 Good</option>
-              <option value="3">3 Outstanding</option>
-              <option value="4">4 Excellent</option>
-              <option value="5">5 Masterpiece</option>
-            </select>
-          </div>
+        <div class="row" id="f-picker"></div>
+        <div class="row" style="margin-top:10px">
           <div class="field">
             <label>Resell Mode</label>
             <select id="f-mode">
@@ -419,21 +406,8 @@
     <div id="b-single-panel" style="display:none;">
       <div class="panel">
         <h2>Black Market Flip Setup</h2>
-        <div class="row">
-          <div class="field" style="min-width:260px">
-            <label>Item ID (gear/artifacts sell best, e.g. T6_HEAD_PLATE_SET1@2)</label>
-            <input type="text" id="b-itemid" value="T4_BAG" style="width:100%">
-          </div>
-          <div class="field">
-            <label>Quality</label>
-            <select id="b-quality">
-              <option value="1">1 Normal</option>
-              <option value="2">2 Good</option>
-              <option value="3">3 Outstanding</option>
-              <option value="4">4 Excellent</option>
-              <option value="5">5 Masterpiece</option>
-            </select>
-          </div>
+        <div class="row" id="b-picker"></div>
+        <div class="row" style="margin-top:10px">
           <div class="field">
             <label></label>
             <button class="action" id="b-go">Calculate</button>
@@ -732,6 +706,308 @@ function liquidityBadge(vol){
   if(vol>=500){ tier="high"; label="high"; }
   else if(vol>=50){ tier="mid"; label="med"; }
   return `<span class="badge ${tier}">${label} · ${fmt(vol)}/d</span>`;
+}
+
+// ==================== ITEM PICKER (cascading selects) ====================
+// Mirrors Albion's own market category hierarchy: Materials / Weapons / Armor /
+// Accessories / Consumables, each drilling into the specific sub-type, then a
+// shared Tier / Enchant / Quality row. Used by both the Market Flip and Black
+// Market single-item lookup panels via a shared prefix ("f" or "b").
+
+function stripHonorific(name){
+  return name.replace(/^[^']+'s\s+/, "");
+}
+function equipLabel(base){
+  const entries = EQUIPMENT_NAMES[base] || {};
+  const tiers = Object.keys(entries).map(Number).sort((a,b)=>a-b);
+  if(!tiers.length) return base;
+  return stripHonorific(entries[tiers[0]]);
+}
+function armorFamilyLabel(line, set){
+  const label = equipLabel(`ARMOR_${line}_SET${set}`);
+  const words = label.split(" ");
+  words.pop();
+  return words.join(" ") || label;
+}
+
+const WEAPON_HAND_GROUPS = {
+  ONE_HANDED: {label:"One-Handed", prefix:"MAIN_", types: WEAPON_1H},
+  TWO_HANDED: {label:"Two-Handed", prefix:"2H_",   types: WEAPON_2H},
+  OFF_HAND:   {label:"Off-Hand",   prefix:"OFF_",  types: OFFHAND_TYPES},
+};
+const ARMOR_SLOT_LABELS = {HEAD:"Head", ARMOR:"Chest", SHOES:"Shoes"};
+const ARMOR_LINE_LABELS = {CLOTH:"Cloth", LEATHER:"Leather", PLATE:"Plate"};
+const ACCESSORY_TYPE_LABELS = {BAG:"Bag", CAPE:"Cape"};
+const CONSUMABLE_GROUPS = {
+  POTION: {label:"Potion", prefix:"POTION_", types: POTION_TYPES, labels:{
+    CLEANSE:"Cleanse (Invisibility)", COOLDOWN:"Poison", ENERGY:"Energy", HEAL:"Healing",
+    REVIVE:"Gigantify", SLOWFIELD:"Sticky", STONESKIN:"Resistance",
+  }},
+  MEAL: {label:"Food", prefix:"MEAL_", types: FOOD_TYPES, labels:{
+    GRILLEDFISH:"Grilled Fish", OMELETTE:"Omelette", OMELETTE_FISH:"Fish Omelette", PIE:"Pie",
+    PIE_FISH:"Fish Pie", ROAST:"Roast", ROAST_FISH:"Roasted Fish", SALAD:"Salad",
+    SALAD_FISH:"Fish Salad", SANDWICH:"Sandwich", SANDWICH_FISH:"Fish Sandwich",
+    SEAWEEDSALAD:"Seaweed Salad", SOUP:"Soup", SOUP_FISH:"Fish Soup", STEW:"Stew", STEW_FISH:"Fish Stew",
+  }},
+};
+
+const pickerState = {}; // prefix -> {category, ...selections, tier, enchant, quality}
+
+function pickerEl(prefix, suffix){ return document.getElementById(`${prefix}-p-${suffix}`); }
+
+function initItemPicker(prefix){
+  pickerState[prefix] = {category:"Materials"};
+  const root = document.getElementById(`${prefix}-picker`);
+  root.innerHTML = `
+    <div class="field" style="min-width:150px">
+      <label>Category</label>
+      <select id="${prefix}-p-cat">
+        <option value="Materials">Materials (Raw &amp; Refined)</option>
+        <option value="Weapons">Weapons</option>
+        <option value="Armor">Armor</option>
+        <option value="Accessories">Accessories</option>
+        <option value="Consumables">Consumables</option>
+      </select>
+    </div>
+    <div class="row" id="${prefix}-p-sub" style="gap:14px"></div>
+    <div class="field">
+      <label>Tier</label>
+      <select id="${prefix}-p-tier"></select>
+    </div>
+    <div class="field">
+      <label>Enchant</label>
+      <select id="${prefix}-p-enchant">
+        <option value="0">.0 (Normal)</option>
+        <option value="1">.1 (Uncommon)</option>
+        <option value="2">.2 (Rare)</option>
+        <option value="3">.3 (Exceptional)</option>
+        <option value="4">.4 (Pristine)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Quality</label>
+      <select id="${prefix}-p-quality">
+        <option value="1">1 Normal</option>
+        <option value="2">2 Good</option>
+        <option value="3">3 Outstanding</option>
+        <option value="4">4 Excellent</option>
+        <option value="5">5 Masterpiece</option>
+      </select>
+    </div>
+  `;
+  pickerEl(prefix,"cat").addEventListener("change", e=>{
+    pickerState[prefix].category = e.target.value;
+    renderPickerSub(prefix);
+  });
+  pickerEl(prefix,"tier").addEventListener("change", ()=>refreshPickerPreview(prefix));
+  pickerEl(prefix,"enchant").addEventListener("change", ()=>refreshPickerPreview(prefix));
+  pickerEl(prefix,"quality").addEventListener("change", ()=>refreshPickerPreview(prefix));
+  renderPickerSub(prefix);
+}
+
+function renderPickerSub(prefix){
+  const category = pickerState[prefix].category;
+  const sub = pickerEl(prefix,"sub");
+  if(category === "Materials"){
+    sub.innerHTML = `
+      <div class="field">
+        <label>Resource</label>
+        <select id="${prefix}-p-line">
+          <option value="ORE">Ore / Metal Bar</option>
+          <option value="WOOD">Wood / Planks</option>
+          <option value="FIBER">Fiber / Cloth</option>
+          <option value="HIDE">Hide / Leather</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Form</label>
+        <select id="${prefix}-p-form">
+          <option value="raw">Raw Material</option>
+          <option value="refined">Refined Good</option>
+        </select>
+      </div>`;
+    pickerEl(prefix,"line").addEventListener("change", ()=>{ refreshPickerTiers(prefix); refreshPickerPreview(prefix); });
+    pickerEl(prefix,"form").addEventListener("change", ()=>refreshPickerPreview(prefix));
+  } else if(category === "Weapons"){
+    sub.innerHTML = `
+      <div class="field">
+        <label>Hand</label>
+        <select id="${prefix}-p-hand">
+          <option value="ONE_HANDED">One-Handed</option>
+          <option value="TWO_HANDED">Two-Handed</option>
+          <option value="OFF_HAND">Off-Hand</option>
+        </select>
+      </div>
+      <div class="field" style="min-width:160px">
+        <label>Weapon Type</label>
+        <select id="${prefix}-p-wtype"></select>
+      </div>`;
+    const fillWeaponTypes = ()=>{
+      const hand = pickerEl(prefix,"hand").value;
+      const group = WEAPON_HAND_GROUPS[hand];
+      const wtypeSel = pickerEl(prefix,"wtype");
+      wtypeSel.innerHTML = group.types.map(t=>`<option value="${t}">${equipLabel(group.prefix+t)}</option>`).join("");
+      refreshPickerTiers(prefix);
+      refreshPickerPreview(prefix);
+    };
+    pickerEl(prefix,"hand").addEventListener("change", fillWeaponTypes);
+    pickerEl(prefix,"wtype").addEventListener("change", ()=>{ refreshPickerTiers(prefix); refreshPickerPreview(prefix); });
+    fillWeaponTypes();
+  } else if(category === "Armor"){
+    sub.innerHTML = `
+      <div class="field">
+        <label>Slot</label>
+        <select id="${prefix}-p-slot">
+          <option value="HEAD">Head</option>
+          <option value="ARMOR">Chest</option>
+          <option value="SHOES">Shoes</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Line</label>
+        <select id="${prefix}-p-armline">
+          <option value="CLOTH">Cloth</option>
+          <option value="LEATHER">Leather</option>
+          <option value="PLATE">Plate</option>
+        </select>
+      </div>
+      <div class="field" style="min-width:150px">
+        <label>Set</label>
+        <select id="${prefix}-p-set"></select>
+      </div>`;
+    const fillSets = ()=>{
+      const line = pickerEl(prefix,"armline").value;
+      const setSel = pickerEl(prefix,"set");
+      setSel.innerHTML = [1,2,3].map(s=>`<option value="${s}">Set ${s} (${armorFamilyLabel(line,s)})</option>`).join("");
+      refreshPickerTiers(prefix);
+      refreshPickerPreview(prefix);
+    };
+    pickerEl(prefix,"slot").addEventListener("change", ()=>{ refreshPickerTiers(prefix); refreshPickerPreview(prefix); });
+    pickerEl(prefix,"armline").addEventListener("change", fillSets);
+    pickerEl(prefix,"set").addEventListener("change", ()=>{ refreshPickerTiers(prefix); refreshPickerPreview(prefix); });
+    fillSets();
+  } else if(category === "Accessories"){
+    sub.innerHTML = `
+      <div class="field">
+        <label>Type</label>
+        <select id="${prefix}-p-acctype">
+          <option value="BAG">Bag</option>
+          <option value="CAPE">Cape</option>
+        </select>
+      </div>`;
+    pickerEl(prefix,"acctype").addEventListener("change", ()=>{ refreshPickerTiers(prefix); refreshPickerPreview(prefix); });
+  } else if(category === "Consumables"){
+    sub.innerHTML = `
+      <div class="field">
+        <label>Type</label>
+        <select id="${prefix}-p-constype">
+          <option value="POTION">Potion</option>
+          <option value="MEAL">Food</option>
+        </select>
+      </div>
+      <div class="field" style="min-width:160px">
+        <label>Item</label>
+        <select id="${prefix}-p-consitem"></select>
+      </div>`;
+    const fillConsItems = ()=>{
+      const group = CONSUMABLE_GROUPS[pickerEl(prefix,"constype").value];
+      const itemSel = pickerEl(prefix,"consitem");
+      itemSel.innerHTML = group.types.map(t=>`<option value="${t}">${group.labels[t]||t}</option>`).join("");
+      refreshPickerTiers(prefix);
+      refreshPickerPreview(prefix);
+    };
+    pickerEl(prefix,"constype").addEventListener("change", fillConsItems);
+    pickerEl(prefix,"consitem").addEventListener("change", ()=>{ refreshPickerTiers(prefix); refreshPickerPreview(prefix); });
+    fillConsItems();
+  }
+  refreshPickerTiers(prefix);
+  refreshPickerPreview(prefix);
+}
+
+// Rebuilds the Tier dropdown to only the tiers that actually exist for the current
+// selection (materials: 2-8; weapons/armor/accessories: 4-8; consumables: whatever
+// specific tiers that potion/food actually has, which varies per item).
+function refreshPickerTiers(prefix){
+  const category = pickerState[prefix].category;
+  const tierSel = pickerEl(prefix,"tier");
+  const prevValue = tierSel.value;
+  let tiers;
+  if(category === "Materials"){
+    tiers = [2,3,4,5,6,7,8];
+  } else if(category === "Consumables"){
+    const group = CONSUMABLE_GROUPS[pickerEl(prefix,"constype").value];
+    const base = group.prefix + pickerEl(prefix,"consitem").value;
+    tiers = Object.keys(EQUIPMENT_NAMES[base]||{}).map(Number).sort((a,b)=>a-b);
+  } else {
+    tiers = [4,5,6,7,8];
+  }
+  tierSel.innerHTML = tiers.map(t=>`<option value="${t}">Tier ${t}</option>`).join("");
+  if(tiers.includes(parseInt(prevValue))) tierSel.value = prevValue;
+
+  const enchantSel = pickerEl(prefix,"enchant");
+  const tier = parseInt(tierSel.value);
+  const enchantAllowed = category !== "Materials" || tier >= 4;
+  enchantSel.disabled = !enchantAllowed;
+  if(!enchantAllowed) enchantSel.value = "0";
+}
+
+// Computes {id, name} for the current picker selection and updates the inline preview.
+function resolvePickerItem(prefix){
+  const category = pickerState[prefix].category;
+  const tier = parseInt(pickerEl(prefix,"tier").value);
+  const enchant = parseInt(pickerEl(prefix,"enchant").value) || 0;
+
+  if(category === "Materials"){
+    const lineKey = pickerEl(prefix,"line").value;
+    const form = pickerEl(prefix,"form").value;
+    const base = form === "raw" ? LINES[lineKey].raw : LINES[lineKey].refined;
+    return {id: buildItemId(base, tier, enchant), name: itemName(base, tier, enchant)};
+  }
+  if(category === "Weapons"){
+    const hand = pickerEl(prefix,"hand").value;
+    const group = WEAPON_HAND_GROUPS[hand];
+    const wtype = pickerEl(prefix,"wtype").value;
+    const base = group.prefix + wtype;
+    return {id: buildEquipmentId(base, tier, enchant), name: equipmentName(base, tier, enchant) || `${group.label} ${wtype}`};
+  }
+  if(category === "Armor"){
+    const slot = pickerEl(prefix,"slot").value;
+    const line = pickerEl(prefix,"armline").value;
+    const set = pickerEl(prefix,"set").value;
+    const base = `${slot}_${line}_SET${set}`;
+    return {id: buildEquipmentId(base, tier, enchant), name: equipmentName(base, tier, enchant) || base};
+  }
+  if(category === "Accessories"){
+    const base = pickerEl(prefix,"acctype").value;
+    return {id: buildEquipmentId(base, tier, enchant), name: equipmentName(base, tier, enchant) || base};
+  }
+  if(category === "Consumables"){
+    const group = CONSUMABLE_GROUPS[pickerEl(prefix,"constype").value];
+    const base = group.prefix + pickerEl(prefix,"consitem").value;
+    return {id: buildEquipmentId(base, tier, enchant), name: equipmentName(base, tier, enchant) || base};
+  }
+  return {id: null, name: null};
+}
+
+function refreshPickerPreview(prefix){
+  const {id, name} = resolvePickerItem(prefix);
+  pickerState[prefix].resolved = {id, name};
+  let previewEl = document.getElementById(`${prefix}-p-preview`);
+  if(!previewEl){
+    previewEl = document.createElement("div");
+    previewEl.id = `${prefix}-p-preview`;
+    previewEl.className = "hint";
+    previewEl.style.marginTop = "8px";
+    pickerEl(prefix,"sub").parentElement.after(previewEl);
+  }
+  previewEl.innerHTML = id ? `Selected: <b>${name}</b> <span class="muted">(${id})</span>` : `<span class="muted">No item resolved for this selection.</span>`;
+}
+
+function getPickerItemId(prefix){
+  return (pickerState[prefix] && pickerState[prefix].resolved) ? pickerState[prefix].resolved.id : null;
+}
+function getPickerQuality(prefix){
+  return pickerEl(prefix,"quality").value;
 }
 
 // ---------- MARKET FLIP SUB-TABS ----------
@@ -1321,10 +1597,10 @@ async function runFlip(){
   const statusEl = document.getElementById("f-status");
   statusEl.className = "status"; statusEl.textContent = "Fetching live prices…";
   try{
-    const itemId = document.getElementById("f-itemid").value.trim();
-    const quality = document.getElementById("f-quality").value;
+    const itemId = getPickerItemId("f");
+    const quality = getPickerQuality("f");
     const mode = document.getElementById("f-mode").value;
-    if(!itemId) throw new Error("Enter an item ID");
+    if(!itemId) throw new Error("No item resolved — check the picker selection above.");
 
     const [priceMap, volMap] = await Promise.all([
       fetchPrices(itemId, quality),
@@ -1530,9 +1806,9 @@ async function runBM(){
   const statusEl = document.getElementById("b-status");
   statusEl.className = "status"; statusEl.textContent = "Fetching live prices…";
   try{
-    const itemId = document.getElementById("b-itemid").value.trim();
-    const quality = document.getElementById("b-quality").value;
-    if(!itemId) throw new Error("Enter an item ID");
+    const itemId = getPickerItemId("b");
+    const quality = getPickerQuality("b");
+    if(!itemId) throw new Error("No item resolved — check the picker selection above.");
 
     const [priceMap, volMap] = await Promise.all([
       fetchPrices(itemId, quality),
@@ -1579,6 +1855,9 @@ async function runBM(){
     statusEl.textContent = "Error: " + err.message;
   }
 }
+
+initItemPicker("f");
+initItemPicker("b");
 </script>
 </body>
 </html>
